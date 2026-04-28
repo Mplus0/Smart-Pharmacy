@@ -1,0 +1,34 @@
+#---standard pioneer footprint---
+#---(in meters)---
+# 机器人底盘轮廓点（米） - Pioneer标准底盘轮廓（注释掉的原始配置）
+#footprint: [ [0.254, -0.0508], [0.1778, -0.0508], [0.1778, -0.1778], [-0.1905, -0.1778], [-0.254, 0], [-0.1905, 0.1778], [0.1778, 0.1778], [0.1778, 0.0508], [0.254, 0.0508] ]
+# 当前使用的机器人底盘轮廓点（米） - 矩形轮廓
+robot_radius: 0.03
+# [ [-0.14,-0.11], [0.14,-0.11], [0.14,0.11], [-0.14,0.11] ]
+
+transform_tolerance: 0.2  # 坐标变换容忍度（秒），等待坐标变换的最大时间
+map_type: map  # 地图类型，"map"表示占用栅格地图
+
+# 障碍物层配置
+obstacle_layer:
+  enabled: true  # 是否启用障碍物层
+  obstacle_range: 6.5  # 检测障碍物的最大范围（米）
+  raytrace_range: 6.0  # 射线追踪清除障碍物的最大范围（米）
+  inflation_radius: 0.2  # 障碍物膨胀半径（米），影响规划路径与障碍物的安全距离
+  track_unknown_space: true  # 是否追踪未知空间
+  combination_method: 1  # 与其他层融合的方法（0: 覆盖, 1: 最大, 2: 乘, 3: 加）（原1）
+
+  # 观测源配置
+  observation_sources: laser_scan_sensor  # 观测源名称
+  laser_scan_sensor: {data_type: LaserScan, topic: scan, marking: true, clearing: true}  # 激光传感器配置
+
+# 膨胀层配置 - 用于对障碍物周围区域进行代价膨胀
+inflation_layer:
+  enabled: true  # 是否启用膨胀层
+  cost_scaling_factor: 10.0  # 代价缩放因子，指数衰减率（值越大衰减越快）
+  inflation_radius: 0.18  # 膨胀半径（米），影响路径规划时避开障碍物的距离
+
+# 静态层配置 - 用于加载静态地图
+static_layer:
+  enabled: true  # 是否启用静态层
+  map_topic: "/map"  # 静态地图话题名称

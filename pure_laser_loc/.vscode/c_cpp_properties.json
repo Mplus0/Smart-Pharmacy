@@ -1,0 +1,42 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/ncut/cartographer_ws/devel_isolated/cartographer_ros_msgs/include/**",
+        "/home/ncut/catkin_ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/ncut/cartographer_ws/devel_isolated/cartographer/include/**",
+        "/home/ncut/catkin_ws/src/aicar_imu/aicar_imu/include/**",
+        "/home/ncut/catkin_ws/src/aicar_racer/include/**",
+        "/home/ncut/catkin_ws/src/fdilink_ahrs/include/**",
+        "/home/ncut/catkin_ws/src/lidar/hls_lfcd_lds_driver/include/**",
+        "/home/ncut/catkin_ws/src/learn_pid/include/**",
+        "/home/ncut/catkin_ws/src/mijia/include/**",
+        "/home/ncut/catkin_ws/src/mijia_control/include/**",
+        "/home/ncut/catkin_ws/src/opencv2agr/include/**",
+        "/home/ncut/catkin_ws/src/3DMAP/realsense_ros_gazebo/include/**",
+        "/home/ncut/catkin_ws/src/robot_chat/include/**",
+        "/home/ncut/catkin_ws/src/robot_opencv/include/**",
+        "/home/ncut/catkin_ws/src/ros_man/include/**",
+        "/home/ncut/catkin_ws/src/lidar/sc_mini/include/**",
+        "/home/ncut/catkin_ws/src/tf01_static/include/**",
+        "/home/ncut/catkin_ws/src/tf02_dynamid/include/**",
+        "/home/ncut/tianbot_ws/src/tianracer/tianracer_core/include/**",
+        "/home/ncut/catkin_ws/src/ros_tutorials/turtlesim/include/**",
+        "/home/ncut/catkin_ws/src/velpub_old/include/**",
+        "/home/ncut/catkin_ws/src/xf_mic_asr_offline_line/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

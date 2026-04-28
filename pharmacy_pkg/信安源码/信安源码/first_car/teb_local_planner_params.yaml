@@ -1,0 +1,104 @@
+TebLocalPlannerROS:
+
+  odom_topic: odom  # 里程计话题名称
+    
+  # 轨迹规划参数
+  teb_autosize: True  # 是否自动调整轨迹长度
+  dt_ref: 0.2  # 参考时间步长(s)，控制轨迹点的时间间隔（原0.3）
+  dt_hysteresis: 0.08  # 时间步长的滞后量，避免频繁调整
+  global_plan_overwrite_orientation: True  # 是否使用全局规划的方向覆盖局部规划
+  allow_init_with_backwards_motion: False  # 是否允许以倒车方式初始化轨迹
+  max_global_plan_lookahead_dist: 5.0  # 全局规划路径的最大前瞻距离(m)（原8.0）
+  feasibility_check_no_poses: 7  # 检查轨迹可行性的位姿数量(原1)
+  exact_arc_length: False  # 是否精确计算圆弧长度
+  force_reinit_new_goal_dist: 1.0  # 新目标距离超过此值时强制重新初始化规划
+    
+  # 机器人运动学参数
+  max_vel_x: 1.2 # 0.5  # 最大前进速度(m/s)
+  max_vel_x_backwards: 0.7  # 最大后退速度(m/s)
+  max_vel_y: 0.0  # 最大侧向速度(m/s)，差速驱动机器人通常为0
+  max_vel_theta: 0.4  # 最大旋转速度(rad/s)0.4
+  acc_lim_x: 0.45 # 0.35  # X方向加速度限制(m/s²)
+  acc_lim_theta: 0.2  # 旋转加速度限制(rad/s²)
+
+  # ********************** 轮式机器人参数 ********************
+  min_turning_radius: 0.43  # 最小转弯半径(m)，适用于轮式机器人        原来0.3
+  wheelbase: 0.21  # 轴距(m)
+  cmd_angle_instead_rotvel: False  # 是否使用角度代替旋转速度作为控制输入
+  # ********************************************************************
+
+  is_footprint_dynamic: False  # 机器人轮廓是否动态变化
+
+  footprint_model:  # 机器人轮廓模型
+    type: "line"  # 轮廓类型：点、圆形、双圆、线、多边形
+    line_start: [-0.1, 0.0]  # 线轮廓起点(m)
+    line_end: [0.1, 0.0]  # 线轮廓终点(m)
+
+  # 目标容忍度参数
+  xy_goal_tolerance: 0.125  # 位置误差容忍度(m)
+  yaw_goal_tolerance: 0.08  # 角度误差容忍度(rad)
+  free_goal_vel: False  # 到达目标时是否允许非零速度
+    
+  # 障碍物处理参数
+  min_obstacle_dist: 0.28  # 与障碍物的最小距离(m)原0.18
+  inflation_dist : 0.14 # 障碍物膨胀距离(m)原0.08，原1可以过三各交
+  include_costmap_obstacles:  True  # 是否包含代价地图中的障碍物
+  include_dynamic_obstacles: False  # 是否包含动态障碍物
+  costmap_obstacles_behind_robot_dist: 1.0  # 机器人后方障碍物的考虑距离(m)
+  dynamic_obstacle_inflation_dist: 0.15  # 动态障碍物的膨胀距离(m)原0.18
+  obstacle_poses_affected: 15  # 受障碍物影响的轨迹点数
+  costmap_converter_plugin: ""  # 代价地图转换器插件名称
+  costmap_converter_spin_thread: True  # 是否在单独线程中运行代价地图转换器
+  costmap_converter_rate: 5  # 代价地图转换频率(Hz)
+  legacy_obstacle_association: False  # 是否使用旧版障碍物关联算法
+  obstacle_association_cutoff_factor: 5.0  # 障碍物关联的截断因子
+  obstacle_association_force_inclusion_factor: 1.5  # 强制包含障碍物的因子
+
+  # 优化参数
+  no_inner_iterations: 5  # 内部迭代次数
+  no_outer_iterations: 4  # 外部迭代次数
+  optimization_activate: True  # 是否激活优化
+  optimization_verbose: False  # 是否输出优化详细信息
+  penalty_epsilon: 0.05  # 惩罚函数的松弛变量
+  weight_max_vel_x: 2  # 最大速度惩罚权重
+  weight_max_vel_theta: 1  # 最大旋转速度惩罚权重
+  weight_acc_lim_x: 1  # 加速度惩罚权重
+  weight_acc_lim_theta: 1  # 旋转加速度惩罚权重
+  weight_kinematics_nh: 1000  # 非完整约束惩罚权重
+  weight_kinematics_forward_drive: 860  # 前向驱动约束惩罚权重
+  weight_kinematics_turning_radius: 10.0  # 转弯半径约束惩罚权重
+  weight_optimaltime: 12  # 最优时间惩罚权重
+  weight_obstacle: 70  # 障碍物惩罚权重
+  weight_dynamic_obstacle: 100  # 动态障碍物惩罚权重(尚未使用)
+  obstacle_cost_exponent: 4.0  # 障碍物代价指数
+  weight_adapt_factor: 1.2  # 自适应权重因子
+  weight_dynamic_obstacle_inflation: 0.6  # 动态障碍物膨胀惩罚权重
+  weight_inflation: 0.8  # 障碍物膨胀惩罚权重
+  weight_shortest_path: 1.0  # 最短路径惩罚权重
+  weight_viapoint: 12.0  # 途经点惩罚权重
+
+  # 同伦类路径规划器参数
+  enable_homotopy_class_planning: False  # 是否启用同伦类路径规划
+  enable_multithreading: True  # 是否启用多线程
+  simple_exploration: False  # 是否使用简单探索策略
+  max_number_classes: 2  # 最大同伦类数量
+  selection_cost_hysteresis: 1.0  # 路径选择代价滞后因子
+  selection_obst_cost_scale: 1.0  # 障碍物代价缩放因子
+  selection_viapoint_cost_scale: 1.0  # 途经点代价缩放因子
+  selection_alternative_time_cost: False  # 是否考虑替代路径的时间代价
+  roadmap_graph_no_samples: 15  # 路线图采样点数量
+  roadmap_graph_area_width: 5  # 路线图区域宽度(m)
+  roadmap_graph_area_length_scale: 1.0  # 路线图区域长度缩放因子
+  h_signature_prescaler: 0.5  # H签名预缩放因子
+  h_signature_threshold: 0.1  # H签名阈值
+  obstacle_keypoint_offset: 0.1  # 障碍物关键点偏移量(m)
+  obstacle_heading_threshold: 0.45  # 障碍物方向阈值(rad)
+  visualize_hc_graph: False  # 是否可视化同伦类图
+
+  # 途经点参数
+  global_plan_viapoint_sep: 5.0  # 全局规划路径上途经点的间隔距离(m)
+  via_points_ordered: False  # 途经点是否按顺序处理
+
+  # 恢复行为参数
+  oscillation_recovery: True  # 是否启用振荡恢复
+  shrink_horizon_backup: True  # 是否启用收缩规划时域的备份策略

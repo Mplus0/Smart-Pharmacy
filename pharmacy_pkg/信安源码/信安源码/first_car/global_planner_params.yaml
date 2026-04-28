@@ -1,0 +1,15 @@
+GlobalPlanner:
+  allow_unknown: false  # 是否允许规划路径通过未知区域（默认为false，不允许）
+  default_tolerance: 0.2  # 当目标点在障碍物中时，与目标点的默认容忍距离(m)
+  visualize_potential: false  # 是否可视化代价势场
+  use_dijkstra: True  # 是否使用Dijkstra算法（否则使用A*算法）
+  use_quadratic: true  # 是否使用二次函数近似计算路径代价
+  use_grid_path: false  # 是否使用网格路径（直接连接网格点）
+  old_navfn_behavior: false  # 是否使用旧版navfn的行为方式
+
+  lethal_cost: 200  # 致命障碍物的代价阈值（大于此值的区域被视为不可通行）
+  neutral_cost: 60  # 中性代价，代表自由空间的基础代价
+  cost_factor: 0.6  # 代价地图转换为势场时的缩放因子
+  publish_potential: true  # 是否发布代价势场
+  orientation_mode: 0  # 路径方向模式（0-无方向约束，1-朝向目标点等）
+  orientation_window_size: 1  # 方向窗口大小，用于计算路径方向

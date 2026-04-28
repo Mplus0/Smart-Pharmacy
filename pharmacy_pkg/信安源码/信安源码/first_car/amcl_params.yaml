@@ -1,0 +1,38 @@
+use_map_topic: true  # 是否使用地图主题
+
+odom_frame_id: "odom"  # 里程计坐标系ID
+base_frame_id: "base_footprint"  # 机器人基坐标系ID
+global_frame_id: "map"  # 全局坐标系ID
+
+## Publish scans from best pose at a max of 10 Hz
+odom_model_type: "diff"  # 里程计模型类型，差分驱动
+odom_alpha5: 0.0  # 里程计噪声参数
+gui_publish_rate: 10.0  # GUI发布频率，单位Hz
+laser_max_beams: 100  # 激光扫描最大使用的光束数量
+laser_max_range: 12.0  # 激光最大探测范围，单位m
+min_particles: 1000  # 粒子滤波器最小粒子数
+max_particles: 5000  # 粒子滤波器最大粒子数
+kld_err: 0.05  # KLD采样误差参数
+kld_z: 0.99  # KLD采样置信度参数
+odom_alpha1: 1.5  # 里程计噪声参数：旋转引起的旋转噪声
+odom_alpha2: 1.2  # 里程计噪声参数：平移引起的旋转噪声
+## translation std dev, m 
+odom_alpha3: 1.2  # 里程计噪声参数：旋转引起的平移噪声
+odom_alpha4: 1.5  # 里程计噪声参数：平移引起的平移噪声
+laser_z_hit: 0.7  # 激光模型参数：测量值命中障碍物的权重
+laser_z_short: 0.05  # 激光模型参数：测量值过短的权重
+laser_z_max: 0.05  # 激光模型参数：测量值达到最大范围的权重
+laser_z_rand: 0.3  # 激光模型参数：随机测量值的权重
+laser_sigma_hit: 0.2  # 激光模型参数：测量值命中障碍物的标准差
+laser_lambda_short: 0.1  # 激光模型参数：短测量值的指数衰减参数
+laser_model_type: "likelihood_field" # "likelihood_field" or "beam"  # 激光模型类型
+laser_likelihood_max_dist: 2.0  # 似然场模型的最大距离，单位m
+update_min_d: 0.25  # 位置更新的最小距离阈值，单位m
+update_min_a: 0.1  # 角度更新的最小角度阈值，单位rad
+
+resample_interval: 1  # 重采样间隔
+
+## Increase tolerance because the computer can get quite busy 
+transform_tolerance: 1.0  # 坐标变换容忍度，单位s
+recovery_alpha_slow: 0.001  # 慢速恢复因子：用于从全局定位失败中恢复
+recovery_alpha_fast: 0.1  # 快速恢复因子：用于从局部定位失败中恢复

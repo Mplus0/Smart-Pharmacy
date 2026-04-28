@@ -1,0 +1,19 @@
+# shutdown_costmaps: false                     # 是否在导航时关闭代价地图（默认不关闭）
+# controller_frequency: 10.0                  # 控制器执行频率（Hz）
+# controller_patience: 10.0                   # 控制器等待有效控制的最大时间（秒）
+
+# planner_frequency: 1                        # 全局规划器执行频率（Hz）
+# planner_patience: 5.0                       # 规划器等待有效路径的最大时间（秒）
+
+# oscillation_timeout: 10.0                   # 检测到振荡的超时时间（秒）
+# oscillation_distance: 0.2                   # 判断振荡的最小移动距离（米）
+# conservative_reset_dist: 0.10               # 保守重置距离：远离障碍物的安全距离（米）
+
+controller_frequency: 5.0                     # 本地控制器执行频率（Hz），决定速度指令发布频率
+controller_patience: 15.0                     # 控制器等待有效控制的最大时间（秒），超时则切换恢复行为
+planner_frequency: 1.0                        # 全局规划器执行频率（Hz），降低频率可减少计算负载
+planner_patience: 5.0                         # 规划器等待有效路径的最大时间（秒），超时则使用最后有效路径
+conservative_reset_dist: 0.2                  # 保守重置距离：机器人与障碍物保持的最小安全距离（米）
+oscillation_timeout: 10.0                     # 检测到振荡（来回移动）的超时时间（秒）
+oscillation_distance: 0.2                     # 判断振荡的最小移动距离（米），小于此距离且超时则触发恢复
+clearing_rotation_allowed: false              # 是否允许旋转清除（卡住时旋转以清除激光扫描）
