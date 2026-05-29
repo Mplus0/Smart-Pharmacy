@@ -6,7 +6,7 @@
 用于在没有裁判软件时验证上报格式和频率。
 
 用法:
-  # 默认端口 8888
+  # 默认端口 9999
   rosrun pharmacy_mplus0_debug tcp_fake_server.py
 
   # 自定义端口

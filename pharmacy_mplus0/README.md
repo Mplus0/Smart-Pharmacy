@@ -119,7 +119,7 @@ main_single.launch → main.launch (tts_method=silent)
 | `sample_store.py` | 记录本轮携带的样本类型和窗口，阻止混装不同样本类型 | 每轮开始/投递完成后清空 |
 | `navigation_client.py` | 封装 `move_base` SimpleActionClient：`go_to("exam_A")`、`clear_costmaps()` | 坐标全部从 waypoints.yaml 读取 |
 | `competition_io.py` | 统一发布 5 个裁判话题 + 语音播报请求 | 提供 `set_task("A")` 等语义化接口 |
-| `board1_decoder.py` | 识别板一核心算法：定位框筛选 → 透视矫正 → 四区域裁剪 → pyzbar 解码 | 纯算法，可离线用图片测试 |
+| `board1_decoder.py` | 识别板一核心算法：直接 pyzbar 整帧解码 → 方框位置推断 → 稳定性过滤（旧方案代码保留在文件末尾供参考） | 纯算法，可离线用图片测试 |
 | `board2_matcher.py` | 识别板二核心算法：加载模板 → 多尺度 TM_CCOEFF_NORMED 匹配 | 纯算法，不依赖 ROS |
 | `tcp_client.py` | TCP 异步客户端：后台线程连接、非阻塞发送、断线自动重连 | 不依赖 ROS |
 | `voice.py` | TTS 播报：支持 `espeak`（异步 subprocess）、`topic`（ROS 话题）、`silent` | 延迟导入 rospy，非 ROS 环境可安全 import |
@@ -132,7 +132,7 @@ main_single.launch → main.launch (tts_method=silent)
 | `config/waypoints.yaml` | 所有航点坐标及窗口映射 | `frames.map`, `frames.robot`, `waypoints.exam_A~C`, `waypoints.lab_1~4`, `waypoints.start/board1/board2`, `exam_waypoints`, `lab_waypoints` |
 | `config/strategy.yaml` | 比赛策略和超时参数 | `dwell.exam_seconds`(1.5), `timeouts.board1_wait_seconds`(15), `visit_order`, `rounds.round_return_to_start` |
 | `config/tcp.yaml` | TCP 上报参数 | `server.ip`(192.168.12.16), `server.port`(8888), `report.car_id`, `report.hz`(2.0) |
-| `config/vision.yaml` | 视觉识别参数 | `camera.stream_url`, `board1.canny_low/high`, `board1.crop_regions`, `board2.match_threshold`(0.72) |
+| `config/vision.yaml` | 视觉识别参数 | `camera.stream_url`, `board1.rotate_degrees/stable_frames/pyzbar_symbols`（旧 Canny/轮廓参数已弃用保留）, `board2.match_threshold`(0.72) |
 
 ---
 
@@ -261,16 +261,15 @@ python scripts/verify_logic.py
 
 ### 6.2 视觉识别参数（vision.yaml — board1 段）
 
+新方案只需 3 个参数，简洁易调：
+
 | 参数名 | 默认值 | 作用 | 调大/调小的影响 |
 | --- | --- | --- | --- |
-| `rotate_degrees` | 5.0 | 画面旋转校正角度 | 摄像头安装角度偏差时调整 |
-| `canny_low` / `canny_high` | 50 / 150 | Canny 边缘检测阈值 | 降低 low 可检测更多边缘（噪声增加）；提高 low 减少噪声（可能漏检） |
-| `contour_min_area` / `contour_max_area` | 500 / 20000 | 定位框面积范围 | 根据图像分辨率调整 |
-| `square_wh_rate` | 0.4 | 正方形长宽比系数 | 增大容忍更多非正方形；减小更严格 |
-| `center_distance_threshold` | 20 | 嵌套方框中心距离阈值 | 增大可容忍更大偏移 |
-| `locating_box_count` | 48 | 需要检测到的定位框总数 | 仅调试用，一般不修改 |
-| `crop_regions.box_1~4` | (65,255,65,235)等 | 四区域裁剪坐标 | 识别板尺寸变化时需重新测量 |
-| `stable_frames` | 3 | 锁定所需连续稳定帧数 | 增大减少误锁但增加延迟 |
+| `rotate_degrees` | 0 | 画面旋转校正角度 | 摄像头安装角度偏差时调整（如 ±3 度） |
+| `stable_frames` | 3 | 连续稳定帧数（解码器内部稳定性过滤 + ROS 节点锁定） | 增大减少误检但增加延迟；设为 1 跳过稳定性过滤 |
+| `pyzbar_symbols` | ["QRCODE"] | pyzbar 扫描的条码类型 | 通常只扫 QR 码即可；可选 CODE128、EAN13 等 |
+
+> **旧方案参数**（`canny_low/high`、`contour_min_area/max_area`、`square_wh_rate`、`center_distance_threshold`、`crop_regions` 等）已在 `vision.yaml` 中标记为"已弃用，保留供参考"，新方案不再使用。
 
 ### 6.3 视觉识别参数（vision.yaml — board2 段）
 
@@ -478,8 +477,9 @@ rospack find pharmacy_mplus0  # 验证
 排查步骤：
 1. 确认摄像头视频流可用：浏览器打开 `http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw`
 2. 确认 `web_video_server` 在运行。
-3. 用 `pharmacy_mplus0_debug/board1_initial_debugger.py` 查看中间步骤画面，检查 Canny 边缘、轮廓筛选是否正常。
-4. 根据画面调整 `vision.yaml` 中 `canny_low/canny_high`、`contour_min_area/max_area`。
+3. 确认二维码在画面中清晰可见、未被遮挡。
+4. 检查 `vision.yaml` 中 `board1.rotate_degrees` 是否与实际摄像头角度匹配。
+5. 新方案使用直接 pyzbar 解码，不依赖 Canny/轮廓参数，旧参数已弃用。
 
 ### Q4：识别板二始终不锁定
 

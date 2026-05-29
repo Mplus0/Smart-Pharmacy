@@ -64,7 +64,7 @@ pharmacy_mplus0_debug/
 
 | 文件路径 | 作用说明 | 何时用 |
 | --- | --- | --- |
-| `scripts/board1_initial_debugger.py` | 显示识别板一处理流水线的 5 个中间步骤窗口 + 透视矫正结果。支持按 q 退出 | 调整 Canny 阈值/面积范围/正方形参数时 |
+| `scripts/board1_initial_debugger.py` | 显示识别板一处理流水线的中间步骤窗口 + pyzbar 解码结果。**注意：该调试器仍在调用旧方案的中间步骤（Canny/轮廓/正方形/定位框/透视矫正），这些步骤仅用于可视化参考，实际 `detect()` 已改用直接 pyzbar 方案** | 理解识别板一检测过程时；后续需跟进更新为新流水线的可视化 |
 | `scripts/board2_template_capture.py` | 从视频流截取当前帧，按 s 保存为模板（如 idle.png） | 现场重新制作识别板二模板时 |
 | `scripts/send_fake_cam_return.py` | 以 1 Hz 持续发布旧格式 `/cam_return`，参数 `_code` 和 `_box` | 不接摄像头时调试主控 |
 | `scripts/send_fake_cv1.py` | 以 1 Hz 持续发布 `/cv1_result`，参数 `_wait`(0~10) | 不接摄像头时调试主控等待/快速通过 |
@@ -117,7 +117,20 @@ roslaunch pharmacy_mplus0 base_camera_nav.launch start_base:=false start_navigat
 roslaunch pharmacy_mplus0_debug test_board1.launch
 ```
 
-会弹出 5~6 个 OpenCV 窗口，分别显示边缘图、面积筛选轮廓、四边形、正方形、定位框和目标透视矫正结果。按 q 退出。可按需调整 `vision.yaml` 中 `board1.*` 参数后重新启动。
+> **注意**：`board1_initial_debugger.py` 使用的 `Board1Decoder` 已更新为直接 pyzbar 方案。调试器窗口中的 Canny/轮廓/正方形/定位框/透视矫正步骤仍会显示（调用旧方案保留的辅助方法），但实际解码流程不再经过这些步骤。
+
+识别板一的调参现在只需关注：
+- 终端日志中 pyzbar 解码结果是否与二维码内容一致
+- 画面偏转角度是否合适（`vision.yaml` 中 `board1.rotate_degrees`）
+- 锁定稳定性（`board1.stable_frames`）
+
+开启识别节点直接验证：
+
+```bash
+roslaunch pharmacy_mplus0 detectors.launch
+# 另开终端查看结果
+rostopic echo /board1_detections
+```
 
 ### 5.2 调试识别板二
 
@@ -212,7 +225,7 @@ rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
 | | `_cv1` | WAIT-0 | 识别板二结果 |
 | | `_cv2` | (空) | 识别板一结果（如 AB-1） |
 | | `_announce` | (空) | 播报文本 |
-| `tcp_fake_server.py` | `_port` | 8888 | 监听端口 |
+| `tcp_fake_server.py` | `_port` | 9999 | 监听端口 |
 | `board2_template_capture.py` | `_name` | idle | 保存的模板名（idle / wait5~wait10） |
 
 ---
@@ -250,15 +263,19 @@ rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
 
 ### 8.1 识别板一调参流程
 
-1. 启动基础系统和调试器：
+新方案参数极少，调参步骤大幅简化：
+
+1. 启动识别节点验证：
    ```bash
-   roslaunch pharmacy_mplus0 base_camera_nav.launch start_base:=false start_navigation:=false
-   roslaunch pharmacy_mplus0_debug test_board1.launch
+   roslaunch pharmacy_mplus0 detectors.launch
+   rostopic echo /board1_detections
    ```
-2. 观察 `step1_edges` — 如果边缘太多（噪声），调高 `canny_low`；太少（漏检），调低。
-3. 观察 `step4_squares` — 如果正方形太少，放宽 `square_wh_rate`（如 0.4→0.6）。
-4. 观察 `step5_positioning_boxes` — 数量接近 48 但不够时，放宽 `center_distance_threshold`（如 20→30）。
-5. 观察 `step6_warped` — 确认透视矫正后的画面是否方正、四个裁剪区域是否正确。
+2. 如果解析结果为空或不正确 — 检查摄像头视频流是否清晰、二维码是否完整可见。
+3. 画面有倾斜 — 调整 `vision.yaml` 中 `board1.rotate_degrees`（如 3、-3）。
+4. 结果频繁跳变 — 增大 `board1.stable_frames`（如 3→5）。
+5. 直接 pyzbar 解码对画面质量要求低于旧方案，通常不需要额外调参。
+
+> 如需可视化调试，仍可启动 `board1_initial_debugger.py`，但其显示的是旧方案辅助方法的结果，不代表实际解码管线。
 
 ### 8.2 导航停靠精度测试
 
@@ -307,13 +324,13 @@ roslaunch pharmacy_mplus0_debug test_navigation.launch target:=board1
 
 ### Q4：tcp_fake_server 启动报"Address already in use"
 
-原因：端口 8888 已被占用（可能有另一个假服务端或真实裁判软件）。
+原因：端口已被占用（默认 9999，也可能是其他服务或残留进程）。
 
 解决：
 ```bash
-rosrun pharmacy_mplus0_debug tcp_fake_server.py _port:=9999
+rosrun pharmacy_mplus0_debug tcp_fake_server.py _port:=9998
 # 同时修改上报节点的端口
-rosrun pharmacy_mplus0 tcp_reporter.py _server_port:=9999
+rosrun pharmacy_mplus0 tcp_reporter.py _server_port:=9998
 ```
 
 ### Q5：send_fake_*.py 发布后主控无反应

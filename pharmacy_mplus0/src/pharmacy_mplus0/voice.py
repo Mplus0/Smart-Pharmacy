@@ -158,10 +158,14 @@ class VoiceAnnouncer(object):
             return text
         return text.encode("utf-8")
 
-    # ---- 日志占位 ---------------------------------------------------
+    # ---- 日志 -------------------------------------------------------
 
-    def _log_info(self, msg, *args):
-        pass
+    @staticmethod
+    def _log_info(msg, *args):
+        from pharmacy_mplus0.log_utils import loginfo
+        loginfo("[Voice] " + msg, *args)
 
-    def _log_warn(self, msg, *args):
-        pass
+    @staticmethod
+    def _log_warn(msg, *args):
+        from pharmacy_mplus0.log_utils import logwarn
+        logwarn("[Voice] " + msg, *args)
