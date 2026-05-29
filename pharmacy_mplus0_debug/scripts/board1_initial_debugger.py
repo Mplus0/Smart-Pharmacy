@@ -57,6 +57,7 @@ class Board1Debugger(object):
 
         # 窗口名称列表，用于创建 OpenCV 窗口。
         self._windows = [
+            "step0_raw",
             "step1_edges",
             "step2_all_contours",
             "step3_quadrilaterals",
@@ -73,20 +74,38 @@ class Board1Debugger(object):
             rospy.logerr("无法打开视频流: %s", self._stream_url)
             sys.exit(1)
 
-        rospy.loginfo("[Board1Debugger] 启动完成，按 q 退出")
+        # 跳帧参数：ARM 性能有限，每 skip_frames 帧只处理 1 帧。
+        # 可通过 launch 参数覆盖，例如 _skip_frames:=5。
+        self._skip_frames = int(rospy.get_param("~skip_frames", 3))
+
+        rospy.loginfo("[Board1Debugger] 启动完成，跳帧间隔=%d，按 q 退出",
+                      self._skip_frames)
 
     def run(self):
-        """主循环：读帧 → 逐步显示中间结果。"""
+        """主循环：读帧 → 跳帧 → 逐步显示中间结果。"""
+        frame_counter = 0
         while not rospy.is_shutdown():
             ret, frame = self._cap.read()
             if not ret:
                 rospy.logwarn_throttle(5.0, "读取帧失败")
                 continue
 
+            # 跳帧：只处理每第 skip_frames 帧，其余丢弃以降低 CPU 负载。
+            frame_counter += 1
+            if frame_counter % self._skip_frames != 0:
+                # 仍然需要处理 imshow + waitKey 以保持窗口响应。
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+                continue
+
+            # 步骤0: 原始帧（不做任何处理，方便和浏览器画面对比）。
+            raw_frame = frame.copy()
+            cv2.imshow("step0_raw", raw_frame)
+
             # 克隆原始帧用于绘制可视化。
             display_frame = frame.copy()
 
-            # 步骤0: 旋转校正。
+            # 步骤1: 旋转校正。
             angle = self._decoder._cfg["rotate_degrees"]
             if angle != 0.0:
                 frame = self._decoder._rotate_frame(frame, angle)

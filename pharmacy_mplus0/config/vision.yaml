@@ -5,36 +5,38 @@ camera:
   stream_url: "http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"
 
 board1:
-  # 识别板一旧策略中对画面做了约 5 度旋转校正。
-  rotate_degrees: 5.0
-  # Canny 边缘检测参数。
+  # ================================================================
+  # 新方案参数（直接 pyzbar 整帧解码，不依赖 Canny/轮廓/透视）
+  # ================================================================
+  # 画面旋转校正角度（摄像头安装倾斜时调整）。
+  rotate_degrees: 0
+  # 连续稳定帧数，用于解码器内部稳定性过滤和 ROS 节点锁定。
+  stable_frames: 3
+  # pyzbar 扫描符号类型，通常只扫 QR 码即可。
+  # 可选值: QRCODE, CODE128, CODE39, EAN13, EAN8 等。
+  pyzbar_symbols: ["QRCODE"]
+
+  # ================================================================
+  # 以下为旧方案（Canny/轮廓/定位框/透视矫正）参数，已弃用，保留供参考。
+  # ================================================================
   canny_low: 50
   canny_high: 150
   canny_aperture: 3
-  # 定位框轮廓面积范围，用于过滤噪声和过大区域。
   contour_min_area: 500
   contour_max_area: 20000
-  # 四边形近似参数，越小越贴合原轮廓。
   approx_poly_epsilon: 0.02
-  # 近似正方形筛选阈值，越小越接近正方形。
   square_wh_rate: 0.4
-  # 嵌套定位框中心距离阈值。
   center_distance_threshold: 20
-  # 旧算法在识别完整板面时，定位框数量满足 48 后开始透视矫正。
   locating_box_count: 48
-  # 透视矫正后的固定画布尺寸。
+  min_outer_boxes: 8
   warp_width: 600
   warp_height: 600
-  # 裁剪二维码区域后用于二值化的阈值。
   binary_threshold: 127
-  # 四个二维码区域在矫正画布中的裁剪范围。
   crop_regions:
     box_1: {y1: 65, y2: 255, x1: 65, x2: 235}
     box_2: {y1: 65, y2: 255, x1: 365, x2: 535}
     box_3: {y1: 335, y2: 525, x1: 65, x2: 235}
     box_4: {y1: 335, y2: 525, x1: 365, x2: 535}
-  # 连续稳定帧数，后续识别节点用来锁定结果，减少抖动。
-  stable_frames: 3
 
 board2:
   # 模板图片目录，文件名约定为 idle.png / wait5.png ... wait10.png。
