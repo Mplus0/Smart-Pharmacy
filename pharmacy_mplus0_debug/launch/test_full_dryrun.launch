@@ -1,0 +1,41 @@
+<launch>
+  <!--
+    test_full_dryrun.launch — 无摄像头干跑主控
+
+    用途: 启动主控、TCP 上报、假识别发布器，验证状态机逻辑。
+    不启动摄像头和真实导航，小车不会运动。
+    适用于: 验证状态机流转、排查主控逻辑 bug。
+
+    用法:
+      roslaunch pharmacy_mplus0_debug test_full_dryrun.launch
+      roslaunch pharmacy_mplus0_debug test_full_dryrun.launch code:=ABC box:=3
+  -->
+
+  <arg name="code" default="AB" doc="模拟的二维码内容"/>
+  <arg name="box"  default="1"  doc="模拟的方框号 0-3"/>
+  <arg name="cv1"  default="0"  doc="模拟的识别板二等待秒数"/>
+  <arg name="car_id"      default="1"      doc="小车编号"/>
+  <arg name="tts_method"  default="silent" doc="干跑使用静默模式"/>
+
+  <!-- TCP 上报节点（静默模式） -->
+  <node name="tcp_reporter"
+        pkg="pharmacy_mplus0" type="tcp_reporter.py"
+        output="screen">
+    <param name="server_ip"   value="127.0.0.1"/>
+    <param name="server_port" value="8888"/>
+    <param name="car_id"      value="$(arg car_id)"/>
+    <param name="tts_method"  value="$(arg tts_method)"/>
+  </node>
+
+  <!-- 主控状态机（不连接摄像头和导航时会使用 fake 结果） -->
+  <node name="main_controller"
+        pkg="pharmacy_mplus0" type="main_controller.py"
+        output="screen" required="true"/>
+
+  <!--
+    以下节点需在另一个终端按需手动启动：
+      rosrun pharmacy_mplus0_debug send_fake_cam_return.py _code:=AB _box:=1
+      rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
+  -->
+
+</launch>

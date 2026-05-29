@@ -1,0 +1,20 @@
+<launch>
+  <!--
+    test_board2.launch — 启动识别板二检测节点用于调试
+
+    用途: 单独验证识别板二的模板匹配效果，查看匹配分数和结果。
+    配合 board2_template_capture.py 可现场重新采集模板。
+  -->
+
+  <arg name="stream_url"
+       default="http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw"
+       doc="HTTP 视频流地址"/>
+
+  <!-- 识别板二正式检测节点 -->
+  <node name="board2_detector"
+        pkg="pharmacy_mplus0" type="board2_detector.py"
+        output="screen" respawn="true">
+    <param name="stream_url" value="$(arg stream_url)"/>
+  </node>
+
+</launch>

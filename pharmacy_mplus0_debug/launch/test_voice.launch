@@ -1,0 +1,33 @@
+<launch>
+  <!--
+    test_voice.launch — 测试语音播报后端
+
+    用途: 向 /announce_request 发布固定测试文本，
+    触发 tcp_reporter 中的语音播报器。
+
+    用法:
+      roslaunch pharmacy_mplus0_debug test_voice.launch
+      roslaunch pharmacy_mplus0_debug test_voice.launch tts_method:=topic
+  -->
+
+  <arg name="tts_method" default="espeak" doc="espeak / topic / silent"/>
+  <arg name="text"       default="化验区忙碌中,需等待 8 秒"
+       doc="测试播报文本"/>
+
+  <!-- 语音播报节点 -->
+  <node name="tcp_reporter"
+        pkg="pharmacy_mplus0" type="tcp_reporter.py"
+        output="screen">
+    <param name="tts_method"  value="$(arg tts_method)"/>
+    <param name="server_ip"   value="127.0.0.1"/>
+    <param name="server_port" value="8888"/>
+  </node>
+
+  <!-- 发送测试播报文本 -->
+  <node name="send_test_announce"
+        pkg="pharmacy_mplus0_debug" type="send_fake_task.py"
+        output="screen">
+    <param name="announce" value="$(arg text)"/>
+  </node>
+
+</launch>

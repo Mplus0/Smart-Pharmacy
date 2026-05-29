@@ -1,0 +1,60 @@
+<launch>
+  <!--
+    main.launch — 比赛业务层启动文件
+
+    启动 pharmacy_mplus0 自身的所有比赛业务节点：
+      - 识别板一检测节点
+      - 识别板二检测节点
+      - TCP 状态上报与语音播报节点
+      - 主控状态机节点
+
+    不负责启动底盘、导航、摄像头和 web_video_server，
+    适用于基础系统已经启动后的业务逻辑调试和重启。
+
+    可覆盖参数:
+      stream_url:    摄像头 HTTP 视频流地址
+      server_ip:     裁判电脑 IP
+      server_port:   裁判软件端口
+      car_id:        小车编号 (1 或 2)
+      tts_method:    语音播报方式 (espeak / topic / silent)
+  -->
+
+  <!-- ── 可配置参数 ─────────────────────────────── -->
+  <arg name="stream_url"
+       default="http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw"
+       doc="web_video_server 提供的 HTTP 视频流地址"/>
+  <arg name="server_ip"   default="192.168.12.16" doc="裁判电脑 IP"/>
+  <arg name="server_port" default="8888"           doc="裁判软件监听端口"/>
+  <arg name="car_id"      default="1"              doc="小车编号"/>
+  <arg name="tts_method"  default="espeak"         doc="语音方式: espeak / topic / silent"/>
+
+  <!-- ── 识别板一检测节点 ───────────────────────── -->
+  <node name="board1_detector"
+        pkg="pharmacy_mplus0" type="board1_detector.py"
+        output="screen" respawn="true">
+    <param name="stream_url" value="$(arg stream_url)"/>
+  </node>
+
+  <!-- ── 识别板二检测节点 ───────────────────────── -->
+  <node name="board2_detector"
+        pkg="pharmacy_mplus0" type="board2_detector.py"
+        output="screen" respawn="true">
+    <param name="stream_url" value="$(arg stream_url)"/>
+  </node>
+
+  <!-- ── TCP 上报与语音播报节点 ────────────────── -->
+  <node name="tcp_reporter"
+        pkg="pharmacy_mplus0" type="tcp_reporter.py"
+        output="screen" respawn="true">
+    <param name="server_ip"   value="$(arg server_ip)"/>
+    <param name="server_port" value="$(arg server_port)"/>
+    <param name="car_id"      value="$(arg car_id)"/>
+    <param name="tts_method"  value="$(arg tts_method)"/>
+  </node>
+
+  <!-- ── 主控状态机节点 ────────────────────────── -->
+  <node name="main_controller"
+        pkg="pharmacy_mplus0" type="main_controller.py"
+        output="screen" respawn="false" required="true"/>
+
+</launch>

@@ -1,0 +1,64 @@
+<launch>
+  <!--
+    race_bringup.launch — 正式比赛一键全量启动文件
+
+    按顺序启动:
+      1. 基础系统（底盘 + 导航 + 摄像头 + web_video_server）
+      2. 比赛业务（识别板一 + 识别板二 + TCP 上报 + 主控）
+
+    开关参数支持现场跳过已启动的基础节点，避免重复启动。
+
+    用法:
+      # 一键全量启动
+      roslaunch pharmacy_mplus0 race_bringup.launch
+
+      # 基础系统已启动，只加比赛业务
+      roslaunch pharmacy_mplus0 race_bringup.launch \
+        start_base:=false start_navigation:=false \
+        start_camera:=false start_video_server:=false
+
+      # 修改裁判 IP / 车号
+      roslaunch pharmacy_mplus0 race_bringup.launch \
+        server_ip:=192.168.12.100 car_id:=2 tts_method:=silent
+  -->
+
+  <!-- ── 基础系统开关 ───────────────────────────── -->
+  <arg name="start_base"         default="true" doc="启动底盘"/>
+  <arg name="start_navigation"   default="true" doc="启动导航"/>
+  <arg name="start_camera"       default="true" doc="启动摄像头"/>
+  <arg name="start_video_server" default="true" doc="启动 web_video_server"/>
+  <arg name="start_pharmacy"     default="true" doc="启动比赛业务节点"/>
+
+  <!-- ── 导航参数 ───────────────────────────────── -->
+  <arg name="planner" default="teb" doc="路径规划器: dwa / teb"/>
+
+  <!-- ── 比赛业务参数 ───────────────────────────── -->
+  <arg name="stream_url"
+       default="http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw"
+       doc="摄像头 HTTP 视频流"/>
+  <arg name="server_ip"   default="192.168.12.16" doc="裁判电脑 IP"/>
+  <arg name="server_port" default="8888"           doc="裁判软件端口"/>
+  <arg name="car_id"      default="1"              doc="小车编号"/>
+  <arg name="tts_method"  default="espeak"         doc="语音方式"/>
+
+  <!-- ── 一、基础系统 ───────────────────────────── -->
+  <include file="$(find pharmacy_mplus0)/launch/base_camera_nav.launch">
+    <arg name="start_base"         value="$(arg start_base)"/>
+    <arg name="start_navigation"   value="$(arg start_navigation)"/>
+    <arg name="start_camera"       value="$(arg start_camera)"/>
+    <arg name="start_video_server" value="$(arg start_video_server)"/>
+    <arg name="planner"            value="$(arg planner)"/>
+  </include>
+
+  <!-- ── 二、比赛业务 ───────────────────────────── -->
+  <group if="$(arg start_pharmacy)">
+    <include file="$(find pharmacy_mplus0)/launch/main.launch">
+      <arg name="stream_url"  value="$(arg stream_url)"/>
+      <arg name="server_ip"   value="$(arg server_ip)"/>
+      <arg name="server_port" value="$(arg server_port)"/>
+      <arg name="car_id"      value="$(arg car_id)"/>
+      <arg name="tts_method"  value="$(arg tts_method)"/>
+    </include>
+  </group>
+
+</launch>

@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>pharmacy_mplus0_debug</name>
+  <version>0.1.0</version>
+  <description>Debug tools for pharmacy_mplus0.</description>
+
+  <maintainer email="EPRobot@todo.todo">EPRobot</maintainer>
+  <license>TODO</license>
+
+  <!-- 调试包保持轻量，只声明 ROS Python 和基础消息依赖。 -->
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>std_msgs</build_export_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>pharmacy_mplus0</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>move_base_msgs</exec_depend>
+  <exec_depend>actionlib</exec_depend>
+  <exec_depend>tf</exec_depend>
+
+  <export/>
+</package>

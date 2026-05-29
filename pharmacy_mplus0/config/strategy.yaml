@@ -1,0 +1,40 @@
+# 比赛策略和超时参数集中配置。
+# 这里的值优先服务“可调试性”：现场只改 YAML，不改 Python 代码。
+dwell:
+  # 到达体检窗口后明显停留的时间。
+  exam_seconds: 1.5
+  # 到达化验窗口后明显停留的时间。
+  lab_seconds: 1.5
+  # 到识别板一后等待画面稳定，再开始取识别结果。
+  board1_settle_seconds: 1.0
+
+timeouts:
+  # 单次等待识别板一二维码结果的最长时间。
+  board1_wait_seconds: 15.0
+  # 识别板一失败后的最大重试次数。
+  board1_max_retry: 3
+  # 等待识别板二状态的最长时间；超时后主控按空闲处理，避免卡死。
+  board2_wait_seconds: 10.0
+  # 单段导航默认超时时间。
+  nav_default_seconds: 40.0
+  # 连续失败轮数过多时，后续主控可以原地停车等待人工检查。
+  max_consecutive_fail_rounds: 5
+
+visit_order:
+  # 固定最短访问顺序表。
+  # 注意 AC 和 ABC 不是字母顺序，而是按当前场地经验优化后的顺序。
+  A: [A]
+  B: [B]
+  C: [C]
+  AB: [A, B]
+  AC: [C, A]
+  BC: [C, B]
+  ABC: [C, A, B]
+
+task_priority:
+  # true 表示优先选样本数最多的二维码，争取一次性配送加成。
+  prefer_more_samples: true
+
+rounds:
+  # Codex.md 要求本次重构每轮结束回起点，为双车方案预留节奏。
+  round_return_to_start: true

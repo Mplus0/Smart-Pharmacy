@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>pharmacy_mplus0</name>
+  <version>0.1.0</version>
+  <description>Refactored smart pharmacy competition package.</description>
+
+  <maintainer email="EPRobot@todo.todo">EPRobot</maintainer>
+  <license>TODO</license>
+
+  <!-- catkin 是 ROS Python/C++ 功能包的构建工具。 -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- 第一阶段源码只需要 rospy/std_msgs；后续节点会逐步用到更多运行依赖。 -->
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+
+  <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>std_msgs</build_export_depend>
+
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <!-- 后续导航、上报和 TF 查询会用到这些运行依赖。 -->
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>move_base_msgs</exec_depend>
+  <exec_depend>actionlib</exec_depend>
+  <exec_depend>tf</exec_depend>
+  <exec_depend>actionlib_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+
+  <export/>
+</package>

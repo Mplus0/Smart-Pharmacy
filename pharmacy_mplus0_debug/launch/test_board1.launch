@@ -1,0 +1,20 @@
+<launch>
+  <!--
+    test_board1.launch — 只启动识别板一初始策略调试器
+
+    用途: 显示识别板一的中间步骤结果，用于现场调整 Canny 阈值、
+    面积范围、正方形筛选等参数。
+  -->
+
+  <arg name="stream_url"
+       default="http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw"
+       doc="HTTP 视频流地址"/>
+
+  <!-- 识别板一调试器（显示所有 OpenCV 中间窗口） -->
+  <node name="board1_initial_debugger"
+        pkg="pharmacy_mplus0_debug" type="board1_initial_debugger.py"
+        output="screen" required="true">
+    <param name="stream_url" value="$(arg stream_url)"/>
+  </node>
+
+</launch>

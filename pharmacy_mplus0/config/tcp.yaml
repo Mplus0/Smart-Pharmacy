@@ -1,0 +1,19 @@
+# TCP 上报参数。
+# TcpClient 后续会用后台线程连接裁判软件，连接失败不能阻塞主控。
+server:
+  # 裁判电脑 IP，现场可通过 launch 参数覆盖。
+  ip: 192.168.12.16
+  # 裁判软件监听端口。
+  port: 8888
+  # 单次 connect 的超时时间，过长会拖慢重连。
+  connect_timeout_seconds: 1.0
+  # 断线后多久尝试重连一次。
+  reconnect_seconds: 2.0
+
+report:
+  # 小车编号，作为 JSON 字段 id 上报。
+  car_id: "1"
+  # 状态上报频率。
+  hz: 2.0
+  # 每条 JSON 后加换行，便于裁判端按行解析，减少粘包影响。
+  newline_delimited_json: true
