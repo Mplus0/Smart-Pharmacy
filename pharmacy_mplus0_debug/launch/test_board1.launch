@@ -7,7 +7,7 @@
   -->
 
   <arg name="stream_url"
-       default="http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw"
+       default="http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"
        doc="HTTP 视频流地址"/>
 
   <!-- 识别板一调试器（显示所有 OpenCV 中间窗口） -->

@@ -30,7 +30,7 @@ from pharmacy_mplus0.board1_decoder import Board1Decoder
 
 # 默认视频流。
 _DEFAULT_STREAM_URL = (
-    "http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw"
+    "http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"
 )
 
 

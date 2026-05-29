@@ -79,9 +79,27 @@ pharmacy_mplus0_debug/
 
 ```bash
 cd ~/robot_ws
-catkin build pharmacy_mplus0_debug
+
+# 注意：src 下部分厂家包（非比赛所需）存在 C++ 源码缺失或 cmake 配置错误，
+# 会阻断 catkin_make 的全量扫描。编译前需要先忽略它们：
+touch src/yujin_ocs/CATKIN_IGNORE
+touch src/xf_mic_asr_offline_circle/CATKIN_IGNORE
+touch src/talos_laser_loc/CATKIN_IGNORE
+
+# 编译
+catkin_make
 source devel/setup.bash
 ```
+
+**被忽略的厂家包说明**：
+
+| 包名 | 忽略原因 | 是否影响比赛 |
+|------|---------|:---:|
+| `yujin_ocs` | 出厂残留元包，cmake 配置错误 | 否 |
+| `xf_mic_asr_offline_circle` | 与 `xf_mic_asr_offline` 重复，同名 C++ target | 否 |
+| `talos_laser_loc` | 源码缺失（`.cpp` 文件不存在） | 否 |
+
+以上三个包不涉及底盘、导航、摄像头、雷达、TF 等核心功能，忽略后不影响比赛。
 
 **注意**：本包通过 `package.xml` 声明了 `pharmacy_mplus0` 为 `<exec_depend>`，编译时会检查 `pharmacy_mplus0` 是否存在。确保先编译 `pharmacy_mplus0`。
 

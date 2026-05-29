@@ -71,7 +71,7 @@ from pharmacy_mplus0.constants import (
 )
 
 # 默认参数。
-_DEFAULT_SERVER_IP = "192.168.12.16"
+_DEFAULT_SERVER_IP = "192.168.124.2"
 _DEFAULT_SERVER_PORT = 8888
 _DEFAULT_SEND_HZ = 2.0
 _DEFAULT_CAR_ID = "1"

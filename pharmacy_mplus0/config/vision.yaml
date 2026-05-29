@@ -2,7 +2,7 @@
 # 第一阶段只是草案，后续 board1_detector.py / board2_detector.py 会读取这些值。
 camera:
   # web_video_server 提供的图像流地址。
-  stream_url: "http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw"
+  stream_url: "http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"
 
 board1:
   # 识别板一旧策略中对画面做了约 5 度旋转校正。
