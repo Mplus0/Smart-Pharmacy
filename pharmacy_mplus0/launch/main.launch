@@ -24,7 +24,7 @@
        default="http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"
        doc="web_video_server 提供的 HTTP 视频流地址"/>
   <arg name="server_ip"   default="192.168.124.2" doc="裁判电脑 IP"/>
-  <arg name="server_port" default="8888"           doc="裁判软件监听端口"/>
+  <arg name="server_port" default="9999"           doc="裁判软件监听端口"/>
   <arg name="car_id"      default="1"              doc="小车编号"/>
   <arg name="tts_method"  default="espeak"         doc="语音方式: espeak / topic / silent"/>
 

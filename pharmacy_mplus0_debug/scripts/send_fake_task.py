@@ -21,6 +21,7 @@ from pharmacy_mplus0.constants import (
     TOPIC_CV2_RESULT,
     TOPIC_ANNOUNCE_REQUEST,
 )
+from pharmacy_mplus0.log_utils import loginfo
 
 
 def main():
@@ -45,7 +46,7 @@ def main():
     )
     rospy.sleep(0.5)
 
-    rospy.loginfo(
+    loginfo(
         "发布模拟状态: task=%s cv1=%s cv2=%s announce=%s",
         task, cv1, cv2, announce or "(无)",
     )

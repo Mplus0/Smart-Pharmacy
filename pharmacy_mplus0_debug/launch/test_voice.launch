@@ -20,7 +20,7 @@
         output="screen">
     <param name="tts_method"  value="$(arg tts_method)"/>
     <param name="server_ip"   value="127.0.0.1"/>
-    <param name="server_port" value="8888"/>
+    <param name="server_port" value="9999"/>
   </node>
 
   <!-- 发送测试播报文本 -->

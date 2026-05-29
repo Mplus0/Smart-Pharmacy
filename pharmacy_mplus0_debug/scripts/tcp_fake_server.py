@@ -29,7 +29,7 @@ class FakeTcpServer(object):
     def __init__(self):
         rospy.init_node("tcp_fake_server", anonymous=True)
 
-        port = int(rospy.get_param("~port", 8888))
+        port = int(rospy.get_param("~port", 9999))
         self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server.setsockopt(
             socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
