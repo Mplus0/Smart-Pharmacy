@@ -10,6 +10,11 @@
 
   # 模拟停在化验窗口 1
   rosrun pharmacy_mplus0_debug send_fake_task.py _task:=1 _cv2:=AB-1
+
+  # 测试音频播放
+  rosrun pharmacy_mplus0_debug send_fake_task.py _announce:=board2_idle
+  rosrun pharmacy_mplus0_debug send_fake_task.py _announce:=board2_busy_8
+  rosrun pharmacy_mplus0_debug send_fake_task.py _announce:=lab_blood_3
 """
 
 import rospy
@@ -51,19 +56,14 @@ def main():
         task, cv1, cv2, announce or "(无)",
     )
 
-    pub_task.publish(String(data=task))
-    pub_cv1.publish(String(data=cv1))
-    if cv2:
-        pub_cv2.publish(String(data=cv2))
-    if announce:
-        pub_announce.publish(String(data=announce))
-
     rate = rospy.Rate(1.0)
     while not rospy.is_shutdown():
         pub_task.publish(String(data=task))
         pub_cv1.publish(String(data=cv1))
         if cv2:
             pub_cv2.publish(String(data=cv2))
+        if announce:
+            pub_announce.publish(String(data=announce))
         rate.sleep()
 
 

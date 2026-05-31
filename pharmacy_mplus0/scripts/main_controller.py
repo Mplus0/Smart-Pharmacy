@@ -114,8 +114,13 @@ class MainController(object):
             "prefer_more_samples", True
         )
 
+        # ---- 干跑模式 ------------------------------------------------
+        self._dry_run = rospy.get_param("~dry_run", False)
+        if self._dry_run:
+            loginfo("[Main] 干跑模式已启用：跳过所有真实导航，模拟导航成功")
+
         # ---- 初始化子模块 --------------------------------------------
-        self._nav = NavigationClient()
+        self._nav = NavigationClient(dry_run=self._dry_run)
         self._io = CompetitionIO()
         self._store = SampleStore()
         self._planner = TaskPlanner(visit_order=visit_order)
@@ -427,9 +432,9 @@ class MainController(object):
         if self._exam_visit_idx >= len(
             self._round_plan.exam_windows
         ):
-            # 播报取到的样本窗口。
+            # 播报取到的样本窗口和样本类型。
             self._io.announce_exam_samples(
-                self._store.carried_windows()
+                self._store.carried_windows(), self._store.sample_type
             )
             self._io.set_task_road()
             self._state = STATE_GOTO_BOARD2

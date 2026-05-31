@@ -40,11 +40,11 @@ class MoveBaseSquare():
         # Create a list to hold the waypoint poses
         # 创建一个列表存储导航点的位置
         waypoints = list()
-        waypoints.append(Pose(Point(1.455, 2.127, 0), quaternions[0]))      # //C
+        waypoints.append(Pose(Point(1.295, 2.087, 0), quaternions[0]))      # //C
         waypoints.append(Pose(Point(0.600, 2.380, 0), quaternions[1]))      #//A 0.675,2.393   0.65
         waypoints.append(Pose(Point(1.380, 2.989, 0), quaternions[2]))      # //B x 减小//1.35,2.899 B小一点1.40
         waypoints.append(Pose(Point(-0.747, 0.900, 0), quaternions[3]))     # //4(-0.830, 0.969, 0)
-        waypoints.append(Pose(Point(-1.572, 1.309, 0), quaternions[4]))    # //3 （-1.650, 1.232, 0)
+        waypoints.append(Pose(Point(-1.595, 1.380, 0), quaternions[4]))    # //3 （-1.650, 1.232, 0)
         waypoints.append(Pose(Point(-0.820, 1.850, 0), quaternions[5]))    # //2
         waypoints.append(Pose(Point(-1.584, 2.340, 0), quaternions[6]))    # //1
         waypoints.append(Pose(Point(0,0,0), quaternions[7]))    #起点

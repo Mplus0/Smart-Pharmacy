@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""TCP 状态上报与语音播报 ROS 节点。
+"""TCP 状态上报与音频播报 ROS 节点。
 
 本节点负责：
 1. 采集并上报裁判所需状态——速度(/odom)、全局坐标(TF: map→base_footprint)、
    当前任务(/current_task)、CV1、CV2。
 2. 以固定频率（默认 2 Hz）向裁判软件发送 JSON，每条末尾带换行。
-3. 订阅 /announce_request，调用 TTS 语音播报。
+3. 订阅 /announce_request，调用 AudioAnnouncer 播放 wav 音频。
 
 TCP 连接失败不阻塞本节点，断线自动重连。
-语音支持 espeak / topic / silent 三种后端，通过 ~tts_method 参数切换。
+音频播放使用 aplay，通过 ~audio_player 参数可切换播放器。
 
 启动方式:
   roslaunch pharmacy_mplus0 reporter.launch
@@ -60,7 +60,7 @@ from pharmacy_mplus0.log_utils import (
     loginfo_throttle, logwarn_throttle, set_node_name,
 )
 from pharmacy_mplus0.tcp_client import TcpClient
-from pharmacy_mplus0.voice import VoiceAnnouncer
+from pharmacy_mplus0.voice import AudioAnnouncer
 from pharmacy_mplus0.constants import (
     TOPIC_ODOM,
     TOPIC_CURRENT_TASK,
@@ -72,11 +72,12 @@ from pharmacy_mplus0.constants import (
 
 # 默认参数。
 _DEFAULT_SERVER_IP = "192.168.124.2"
-_DEFAULT_SERVER_PORT = 8888
+_DEFAULT_SERVER_PORT = 9999
 _DEFAULT_SEND_HZ = 2.0
 _DEFAULT_CAR_ID = "1"
-_DEFAULT_TTS_METHOD = "espeak"
-_DEFAULT_TTS_TOPIC = "/tts_text"
+_DEFAULT_AUDIO_DIR = ""
+_DEFAULT_AUDIO_PLAYER = "aplay"
+_DEFAULT_ALLOW_OVERLAP = False
 # 单次 TF 查询的超时时间（秒），不宜过大以免阻塞主循环。
 _TF_LOOKUP_TIMEOUT = 0.2
 
@@ -221,11 +222,14 @@ class TcpReporterNode(object):
         send_hz = float(rospy.get_param(
             "~send_hz", _DEFAULT_SEND_HZ
         ))
-        tts_method = rospy.get_param(
-            "~tts_method", _DEFAULT_TTS_METHOD
+        audio_dir = rospy.get_param(
+            "~audio_dir", _DEFAULT_AUDIO_DIR
         )
-        tts_topic = rospy.get_param(
-            "~tts_topic", _DEFAULT_TTS_TOPIC
+        audio_player = rospy.get_param(
+            "~audio_player", _DEFAULT_AUDIO_PLAYER
+        )
+        allow_overlap = rospy.get_param(
+            "~allow_overlap", _DEFAULT_ALLOW_OVERLAP
         )
         car_id = str(rospy.get_param(
             "~car_id", _DEFAULT_CAR_ID
@@ -248,7 +252,9 @@ class TcpReporterNode(object):
         loginfo("[Reporter]   裁判软件: %s:%d", server_ip, server_port)
         loginfo("[Reporter]   小车编号: %s", self._car_id)
         loginfo("[Reporter]   发送频率: %.1f Hz", self._send_hz)
-        loginfo("[Reporter]   TTS 方式: %s", tts_method)
+        loginfo("[Reporter]   音频目录: %s", audio_dir)
+        loginfo("[Reporter]   音频播放器: %s", audio_player)
+        loginfo("[Reporter]   允许重叠: %s", allow_overlap)
         loginfo("=" * 60)
 
         # ---- 初始化子模块 --------------------------------------------
@@ -268,9 +274,11 @@ class TcpReporterNode(object):
         self._tcp._log_error = logerr
         self._tcp._log_warn_throttle = logwarn_throttle
 
-        # 语音播报器。
-        self._announcer = VoiceAnnouncer(
-            method=tts_method, tts_topic=tts_topic
+        # 音频播放器。
+        self._announcer = AudioAnnouncer(
+            audio_dir=audio_dir,
+            player=audio_player,
+            allow_overlap=allow_overlap,
         )
         self._announcer._log_info = loginfo
         self._announcer._log_warn = logwarn
@@ -286,9 +294,9 @@ class TcpReporterNode(object):
     # ---- 回调 -------------------------------------------------------
 
     def _cb_announce(self, msg):
-        """收到播报请求，立即异步播报。"""
+        """收到音频事件 ID，立即异步播放。"""
         if msg.data:
-            self._announcer.speak(str(msg.data))
+            self._announcer.play(str(msg.data))
 
     def _on_shutdown(self):
         """节点关闭时清理 TCP 连接。"""

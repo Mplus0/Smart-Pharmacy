@@ -13,7 +13,9 @@
   <arg name="server_ip"   default="127.0.0.1" doc="TCP 上报目标 IP"/>
   <arg name="server_port" default="9999"      doc="TCP 端口"/>
   <arg name="car_id"      default="1"         doc="小车编号"/>
-  <arg name="tts_method"  default="silent"    doc="语音方式"/>
+  <arg name="audio_dir"    default=""            doc="wav 音频目录，空字符串禁用"/>
+  <arg name="audio_player" default="aplay"       doc="音频播放器"/>
+  <arg name="allow_overlap" default="false"       doc="是否允许重叠播放"/>
 
   <!-- 假裁判服务端 -->
   <node name="tcp_fake_server"
@@ -29,7 +31,9 @@
     <param name="server_ip"   value="$(arg server_ip)"/>
     <param name="server_port" value="$(arg server_port)"/>
     <param name="car_id"      value="$(arg car_id)"/>
-    <param name="tts_method"  value="$(arg tts_method)"/>
+    <param name="audio_dir"     value="$(arg audio_dir)"/>
+    <param name="audio_player"  value="$(arg audio_player)"/>
+    <param name="allow_overlap" value="$(arg allow_overlap)"/>
   </node>
 
 </launch>

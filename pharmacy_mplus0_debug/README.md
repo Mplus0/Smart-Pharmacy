@@ -57,7 +57,7 @@ pharmacy_mplus0_debug/
 | `launch/test_board2.launch` | `board2_detector.py`（来自 pharmacy_mplus0） | 摄像头 + web_video_server 已运行 |
 | `launch/test_navigation.launch` | `waypoint_tester.py`，参数 `target` 指定目标航点 | 底盘 + 导航 已启动 |
 | `launch/test_reporter.launch` | `tcp_fake_server.py` + `tcp_reporter.py`（来自 pharmacy_mplus0） | roscore 已启动 |
-| `launch/test_voice.launch` | `tcp_reporter.py` + `send_fake_task.py` 发送测试文本 | roscore 已启动 |
+| `launch/test_voice.launch` | `tcp_reporter.py` + `send_fake_task.py` 发送音频事件 ID | roscore 已启动 |
 | `launch/test_full_dryrun.launch` | `tcp_reporter.py` + `main_controller.py`（均来自 pharmacy_mplus0） | roscore 已启动；需另外手动运行假识别脚本 |
 
 ### 3.2 调试脚本
@@ -179,13 +179,17 @@ rosrun pharmacy_mplus0_debug topic_echo_dashboard.py
 ...
 ```
 
-### 5.5 调试语音播报
+### 5.5 调试音频播报
 
 ```bash
-roslaunch pharmacy_mplus0_debug test_voice.launch tts_method:=espeak
+# 使用默认 aplay 播放器
+roslaunch pharmacy_mplus0_debug test_voice.launch announce:=board2_idle
 
-# 或使用 ROS 话题模式
-roslaunch pharmacy_mplus0_debug test_voice.launch tts_method:=topic
+# 或使用 paplay
+roslaunch pharmacy_mplus0_debug test_voice.launch announce:=board2_busy_8 audio_player:=paplay
+
+# 关闭重叠保护
+roslaunch pharmacy_mplus0_debug test_voice.launch announce:=lab_blood_3 allow_overlap:=true
 ```
 
 ### 5.6 主控干跑（无摄像头、无导航）
@@ -201,20 +205,34 @@ rosrun pharmacy_mplus0_debug send_fake_cam_return.py _code:=AB _box:=1
 rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
 ```
 
-> 干跑模式下因为没有真实 move_base 服务，导航 state 会一直卡在等待中。此时主要验证：假数据接收 → 任务规划 → 状态切换 → 播报文本 → TCP JSON 格式等逻辑。
+> `test_full_dryrun.launch` 已默认启用 `dry_run=true`，`NavigationClient` 会打印 `[DRY-RUN]` 日志并直接模拟导航成功。整个状态机可完整流转，无需真实 move_base。主要用于验证：假数据接收 → 任务规划 → 状态切换 → 播报文本 → TCP JSON 格式等逻辑。
 
 ---
 
 ## 6. 参数调试说明
 
-### 6.1 test_navigation.launch 参数
+### 6.1 test_full_dryrun.launch 参数
+
+| 参数名 | 默认值 | 作用 |
+| --- | --- | --- |
+| `code` | AB | 模拟的二维码内容 |
+| `box` | 1 | 模拟的方框号 0-3 |
+| `cv1` | 0 | 模拟的识别板二等待秒数 |
+| `car_id` | 1 | 小车编号 |
+| `audio_dir` | "" | 干跑默认不播放音频（空字符串） |
+| `audio_player` | aplay | 音频播放器 |
+| `allow_overlap` | false | 是否允许重叠播放 |
+
+> `main_controller` 节点内部已设置 `<param name="dry_run" value="true"/>`，启动即生效，无需用户传入。
+
+### 6.2 test_navigation.launch 参数
 
 | 参数名 | 默认值 | 作用 |
 | --- | --- | --- |
 | `target` | board1 | 目标航点名称：`start` / `board1` / `board2` / `exam_A`~`exam_C` / `lab_1`~`lab_4` |
 | `clear` | true | 导航前是否清理代价地图 |
 
-### 6.2 假数据脚本参数
+### 6.3 假数据脚本参数
 
 | 脚本 | 参数 | 默认值 | 作用 |
 | --- | --- | --- | --- |
@@ -224,7 +242,7 @@ rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
 | `send_fake_task.py` | `_task` | R | 当前任务（A/B/C/1/2/3/4/R） |
 | | `_cv1` | WAIT-0 | 识别板二结果 |
 | | `_cv2` | (空) | 识别板一结果（如 AB-1） |
-| | `_announce` | (空) | 播报文本 |
+| | `_announce` | (空) | 音频事件 ID（如 board2_idle） |
 | `tcp_fake_server.py` | `_port` | 9999 | 监听端口 |
 | `board2_template_capture.py` | `_name` | idle | 保存的模板名（idle / wait5~wait10） |
 

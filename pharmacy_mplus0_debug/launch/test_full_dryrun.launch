@@ -15,7 +15,9 @@
   <arg name="box"  default="1"  doc="模拟的方框号 0-3"/>
   <arg name="cv1"  default="0"  doc="模拟的识别板二等待秒数"/>
   <arg name="car_id"      default="1"      doc="小车编号"/>
-  <arg name="tts_method"  default="silent" doc="干跑使用静默模式"/>
+  <arg name="audio_dir"    default=""           doc="干跑默认不播放音频"/>
+  <arg name="audio_player" default="aplay"      doc="音频播放器"/>
+  <arg name="allow_overlap" default="false"      doc="是否允许重叠播放"/>
 
   <!-- TCP 上报节点（静默模式） -->
   <node name="tcp_reporter"
@@ -24,13 +26,17 @@
     <param name="server_ip"   value="127.0.0.1"/>
     <param name="server_port" value="9999"/>
     <param name="car_id"      value="$(arg car_id)"/>
-    <param name="tts_method"  value="$(arg tts_method)"/>
+    <param name="audio_dir"     value="$(arg audio_dir)"/>
+    <param name="audio_player"  value="$(arg audio_player)"/>
+    <param name="allow_overlap" value="$(arg allow_overlap)"/>
   </node>
 
-  <!-- 主控状态机（不连接摄像头和导航时会使用 fake 结果） -->
+  <!-- 主控状态机（干跑模式：跳过真实导航，模拟导航成功） -->
   <node name="main_controller"
         pkg="pharmacy_mplus0" type="main_controller.py"
-        output="screen" required="true"/>
+        output="screen" required="true">
+    <param name="dry_run" value="true"/>
+  </node>
 
   <!--
     以下节点需在另一个终端按需手动启动：

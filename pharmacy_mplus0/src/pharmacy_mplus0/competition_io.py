@@ -5,14 +5,14 @@
 - /current_task    当前任务状态（A/B/C/1/2/3/4/R）
 - /cv1_result      识别板二结果（WAIT-0 / WAIT-5..WAIT-10）
 - /cv2_result      识别板一任务结果（如 AB-1）
-- /announce_request  语音播报请求文本
+- /announce_request  音频事件 ID（如 board2_idle）
 - /current_qr_task  当前二维码任务信息（双车预留）
 
 主控只调用语义化方法（如 arrive_exam("A")），
-不需要自己拼接播报文本、状态字符串或 JSON。
+不需要自己拼接 event_id、状态字符串或 JSON。
 
-本模块不负责实际 TTS 合成，只把文本发布到
-/announce_request，由 tcp_reporter.py 中的 Voice 模块消费。
+本模块不负责实际音频播放，只把 event_id 发布到
+/announce_request，由 tcp_reporter.py 中的 AudioAnnouncer 消费。
 """
 
 import rospy
@@ -24,12 +24,11 @@ from pharmacy_mplus0.constants import (
     TOPIC_CV2_RESULT,
     TOPIC_ANNOUNCE_REQUEST,
     TOPIC_CURRENT_QR_TASK,
-    LAB_WINDOW_NAMES,
+    LAB_WINDOW_AUDIO_KEYS,
+    SAMPLE_TYPE_AUDIO_KEYS,
+    BOARD2_BUSY_SECONDS_MIN,
+    BOARD2_BUSY_SECONDS_MAX,
     TASK_ROAD,
-    ANNOUNCE_EXAM_SAMPLES,
-    ANNOUNCE_BOARD2_IDLE,
-    ANNOUNCE_BOARD2_BUSY,
-    ANNOUNCE_LAB_ARRIVAL,
 )
 
 
@@ -50,7 +49,7 @@ class CompetitionIO(object):
         self._pub_cv2 = rospy.Publisher(
             TOPIC_CV2_RESULT, String, queue_size=5
         )
-        # announce_request: 语音播报请求，由 tcp_reporter 中的 voice 模块消费。
+        # announce_request: 音频事件 ID，由 tcp_reporter 中的 AudioAnnouncer 消费。
         self._pub_announce = rospy.Publisher(
             TOPIC_ANNOUNCE_REQUEST, String, queue_size=5
         )
@@ -109,44 +108,55 @@ class CompetitionIO(object):
         self._pub_cv1.publish(msg)
         rospy.loginfo("[CompetitionIO] CV1 发布: %s", body)
 
-    # ---- 语音播报请求 -----------------------------------------------
+    # ---- 音频播报请求 -----------------------------------------------
 
-    def announce_exam_samples(self, windows):
+    def announce_exam_samples(self, windows, sample_type="1"):
         """播报体检区取样完成。
 
         参数:
-            windows: 已取样的窗口列表，如 ["A", "B"]。
-        播报示例: "取到 A、B 窗口的样本"
+            windows:     已取样的窗口列表，如 ["A", "B"]。
+            sample_type: 样本类型编号，如 "1"（静脉血）。
+        示例 event_id: exam_sample_ab_venous_blood
         """
-        joined = "、".join([str(w) for w in windows])
-        text = ANNOUNCE_EXAM_SAMPLES.format(joined)
-        self._publish_announce(text)
+        win_key = "".join(sorted([str(w).lower() for w in windows]))
+        sample_key = SAMPLE_TYPE_AUDIO_KEYS.get(
+            str(sample_type), "unknown"
+        )
+        event_id = "exam_sample_{0}_{1}".format(win_key, sample_key)
+        self._publish_announce(event_id)
 
     def announce_board2(self, wait_seconds):
         """播报识别板二状态。
 
         参数:
-            wait_seconds: 等待秒数，0 播报空闲，5-10 播报忙碌等待。
+            wait_seconds: 等待秒数，0 表示空闲，5-10 表示忙碌。
+        示例 event_id: board2_idle / board2_busy_8
         """
-        if wait_seconds == 0:
-            text = ANNOUNCE_BOARD2_IDLE
+        wait_sec = int(wait_seconds)
+        if wait_sec == 0:
+            event_id = "board2_idle"
+        elif BOARD2_BUSY_SECONDS_MIN <= wait_sec <= BOARD2_BUSY_SECONDS_MAX:
+            event_id = "board2_busy_{0}".format(wait_sec)
         else:
-            text = ANNOUNCE_BOARD2_BUSY.format(wait_seconds)
-        self._publish_announce(text)
+            rospy.logwarn(
+                "[CompetitionIO] board2 wait_seconds 异常: %d，按空闲处理",
+                wait_sec,
+            )
+            event_id = "board2_idle"
+        self._publish_announce(event_id)
 
     def announce_lab_arrival(self, lab_window, sample_count):
         """播报到化验窗口并报告样本数量。
 
         参数:
             lab_window:   化验窗口编号（字符串 1-4）。
-            sample_count: 车上携带的样本数量。
-        播报示例: "到达血常规窗口，样本数为 3"
+            sample_count: 车上携带的样本数量，限制在 1~3。
+        示例 event_id: lab_blood_3
         """
-        window_name = LAB_WINDOW_NAMES.get(
-            str(lab_window), "{0}号窗口".format(lab_window)
-        )
-        text = ANNOUNCE_LAB_ARRIVAL.format(window_name, sample_count)
-        self._publish_announce(text)
+        lab_key = LAB_WINDOW_AUDIO_KEYS.get(str(lab_window), "unknown")
+        count = max(1, min(int(sample_count), 3))
+        event_id = "lab_{0}_{1}".format(lab_key, count)
+        self._publish_announce(event_id)
 
     # ---- 双车协作预留 -----------------------------------------------
 
@@ -164,9 +174,9 @@ class CompetitionIO(object):
 
     # ---- 内部 -------------------------------------------------------
 
-    def _publish_announce(self, text):
-        """发布播报请求到 /announce_request 话题。"""
+    def _publish_announce(self, event_id):
+        """发布音频事件 ID 到 /announce_request 话题。"""
         msg = String()
-        msg.data = text
+        msg.data = event_id
         self._pub_announce.publish(msg)
-        rospy.loginfo("[CompetitionIO] 播报请求: %s", text)
+        rospy.loginfo("[CompetitionIO] 播报事件: %s", event_id)

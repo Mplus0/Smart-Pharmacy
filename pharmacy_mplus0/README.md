@@ -60,7 +60,7 @@ pharmacy_mplus0/
 │   ├── board1_decoder.py         # 识别板一解码核心算法
 │   ├── board2_matcher.py         # 识别板二模板匹配核心
 │   ├── tcp_client.py             # TCP 异步连接与发送
-│   ├── voice.py                  # TTS 语音播报封装
+│   ├── voice.py                  # WAV 音频播放封装
 │   └── log_utils.py              # 中文日志工具
 └── templates/board2/             # 识别板二模板图片目录
     └── .gitkeep                  # 占位，模板需从小车复制
@@ -77,7 +77,7 @@ pharmacy_mplus0/
 | `launch/race_bringup.launch` | 正式比赛一键全量启动：底盘→导航→摄像头→视频流→4个业务节点 | 通过 `start_*` 参数可跳过已启动的子系统 |
 | `launch/base_camera_nav.launch` | 仅启动基础系统（底盘/导航/摄像头/视频流），不启动业务 | 赛前验证定位、导航、视频流 |
 | `launch/main.launch` | 启动 4 个比赛业务节点：board1_detector + board2_detector + tcp_reporter + main_controller | 不启动底盘/导航/摄像头 |
-| `launch/main_single.launch` | 同 `main.launch`，但 `tts_method=silent` | 单车调试或双车跟车 |
+| `launch/main_single.launch` | 同 `main.launch`，但 `audio_dir=""` 禁用语音 | 单车调试或双车跟车 |
 | `launch/detectors.launch` | 仅启动 board1_detector + board2_detector | 安全，小车不会运动 |
 | `launch/reporter.launch` | 仅启动 tcp_reporter | 单独调试 TCP 和播报 |
 
@@ -95,7 +95,7 @@ race_bringup.launch
         ├── tcp_reporter.py
         └── main_controller.py
 
-main_single.launch → main.launch (tts_method=silent)
+main_single.launch → main.launch (audio_dir="")
 ```
 
 ### 3.2 脚本（ROS 节点入口）
@@ -122,7 +122,7 @@ main_single.launch → main.launch (tts_method=silent)
 | `board1_decoder.py` | 识别板一核心算法：直接 pyzbar 整帧解码 → 方框位置推断 → 稳定性过滤（旧方案代码保留在文件末尾供参考） | 纯算法，可离线用图片测试 |
 | `board2_matcher.py` | 识别板二核心算法：加载模板 → 多尺度 TM_CCOEFF_NORMED 匹配 | 纯算法，不依赖 ROS |
 | `tcp_client.py` | TCP 异步客户端：后台线程连接、非阻塞发送、断线自动重连 | 不依赖 ROS |
-| `voice.py` | TTS 播报：支持 `espeak`（异步 subprocess）、`topic`（ROS 话题）、`silent` | 延迟导入 rospy，非 ROS 环境可安全 import |
+| `voice.py` | WAV 音频播放：根据 event_id 播放预录制 wav 文件，aplay 异步执行 | 支持 aplay / paplay / ffplay，文件缺失不崩溃 |
 | `log_utils.py` | 中文日志工具：直接写 stdout 绕过 rospy.log* 的 Python 2 编码陷阱 | 提供 `loginfo_throttle` / `logwarn_throttle` |
 
 ### 3.4 配置文件
@@ -227,7 +227,7 @@ roslaunch pharmacy_mplus0 race_bringup.launch \
 roslaunch pharmacy_mplus0 base_camera_nav.launch planner:=dwa
 
 # 2 号车静默模式
-roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2 tts_method:=silent
+roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2 audio_dir:=""
 ```
 
 ### 5.4 离线逻辑自检（无需 ROS）
@@ -288,10 +288,13 @@ python scripts/verify_logic.py
 | `server_ip` | main, race_bringup, reporter | 192.168.12.16 | 裁判电脑 IP |
 | `server_port` | 同上 | 8888 | 裁判软件端口 |
 | `car_id` | 同上 | "1" | 小车编号 |
-| `tts_method` | 同上 | espeak | 语音方式：espeak/topic/silent |
+| `audio_dir` | main, race_bringup, reporter | $(find pharmacy_mplus0)/audio | wav 音频文件目录，设为空字符串可禁用语音 |
+| `audio_player` | 同上 | aplay | 音频播放器：aplay/paplay/ffplay |
+| `allow_overlap` | 同上 | false | 是否允许音频重叠播放 |
 | `stream_url` | main, detectors, race_bringup | http://192.168.12.1:8080/stream?... | 摄像头 HTTP 视频流 |
 | `planner` | base_camera_nav, race_bringup | teb | 路径规划器：dwa/teb |
 | `start_base/navigation/camera/video_server` | race_bringup | true | 各子系统开关 |
+| `dry_run` | main_controller (debug launch) | false | 为 true 时跳过 move_base，所有导航直接模拟成功 |
 
 ---
 
@@ -331,7 +334,7 @@ python scripts/verify_logic.py
 | `/current_task` | `String` | main_controller | tcp_reporter | 当前任务："A"/"B"/"C"/"1"/"2"/"3"/"4"/"R" |
 | `/cv2_result` | `String` | main_controller | tcp_reporter | 识别板一任务结果："AB-1" |
 | `/current_qr_task` | `String` | main_controller | —（双车预留） | 当前执行的二维码任务 |
-| `/announce_request` | `String` | main_controller | tcp_reporter | 语音播报请求文本 |
+| `/announce_request` | `String` | main_controller | tcp_reporter | 音频事件 ID（如 board2_idle、lab_blood_3） |
 | `/reset_detection` | `String` | main_controller | board1_detector, board2_detector | 通知识别节点解锁，重新识别 |
 
 #### 基础系统话题（由厂家包提供）
@@ -444,7 +447,7 @@ rostopic echo /cv1_result
 rosrun pharmacy_mplus0_debug tcp_fake_server.py
 
 # 启动上报节点（指向本机）
-rosrun pharmacy_mplus0 tcp_reporter.py _server_ip:=127.0.0.1 _tts_method:=silent
+rosrun pharmacy_mplus0 tcp_reporter.py _server_ip:=127.0.0.1 _audio_dir:=""
 
 # 用假数据填充状态
 rosrun pharmacy_mplus0_debug send_fake_task.py _task:=A _cv2:=AB-1
@@ -470,7 +473,9 @@ rospack find pharmacy_mplus0  # 验证
 
 原因：move_base 未启动或未就绪。
 
-解决：先启动导航（`robot_navigation.launch`），确认 `rostopic list | grep move_base` 有相关话题后再启主控。
+解决：
+1. 正式比赛 — 先启动导航（`robot_navigation.launch`），确认 `rostopic list | grep move_base` 有相关话题后再启主控。
+2. 干跑调试 — 使用 `pharmacy_mplus0_debug/test_full_dryrun.launch`，该 launch 已默认启用 `dry_run=true`，自动跳过所有导航请求。
 
 ### Q3：识别板一始终无结果
 
@@ -523,7 +528,7 @@ chmod +x ~/robot_ws/src/pharmacy_mplus0/scripts/*.py
 | 修改状态机流程 | `scripts/main_controller.py` |
 | 修改任务选择逻辑 | `src/pharmacy_mplus0/task_planner.py` |
 | 修改导航行为 | `src/pharmacy_mplus0/navigation_client.py` |
-| 修改播报文本 | `src/pharmacy_mplus0/constants.py` 的 `ANNOUNCE_*` 模板 |
+| 修改播报音频映射 | `src/pharmacy_mplus0/constants.py` 的 `LAB_WINDOW_AUDIO_KEYS` / `SAMPLE_TYPE_AUDIO_KEYS` |
 | 修改识别板一算法 | `src/pharmacy_mplus0/board1_decoder.py` |
 | 修改识别板二算法 | `src/pharmacy_mplus0/board2_matcher.py` |
 | 替换语音后端 | `src/pharmacy_mplus0/voice.py` |
@@ -535,3 +540,141 @@ chmod +x ~/robot_ws/src/pharmacy_mplus0/scripts/*.py
 - 任务规划是纯逻辑，修改后先跑 `verify_logic.py` 验证。
 - 所有现场可调参数放入 YAML，不要写进 Python 代码。
 - 不要在正式比赛主流程中依赖 `pharmacy_mplus0_debug`。
+
+---
+
+## 11. Git 协作指南
+
+> 仓库地址：**[https://github.com/Mplus0/Smart-Pharmacy](https://github.com/Mplus0/Smart-Pharmacy)**
+
+### 11.1 首次克隆
+
+```bash
+git clone https://github.com/Mplus0/Smart-Pharmacy.git ~/Smart-Pharmacy
+```
+
+> 小车上的工作空间在 `~/robot_ws/src/`，开发机 clone 到任意路径即可。
+> 小车上通常不直接 clone，而是通过 U 盘或 `scp` 同步 `Smart-Pharmacy/` 目录到
+> `~/robot_ws/src/` 下。
+
+### 11.2 分支策略
+
+| 分支 | 用途 | 说明 |
+|------|------|------|
+| `main` | 稳定主线 | 已通过干跑验证、可在小车上运行的代码 |
+| `dev` | 开发分支 | 新功能、实验性修改的集成分支 |
+| `fix/<描述>` | 问题修复 | 从 `main` 拉出，修完合回 `main` |
+| `feat/<描述>` | 新功能 | 从 `dev` 拉出，做完合回 `dev` |
+
+**日常开发流程**：
+
+```bash
+# 1. 同步最新代码
+git checkout main
+git pull origin main
+
+# 2. 从 main 拉修复分支（或从 dev 拉功能分支）
+git checkout -b fix/board1-timeout
+
+# 3. 修改代码，多次小步提交
+git add pharmacy_mplus0/config/strategy.yaml
+git commit -m "fix: 识别板一超时从 15s 调整为 20s"
+
+# 4. 推送到远程
+git push origin fix/board1-timeout
+
+# 5. 在 GitHub 上创建 Pull Request，合入 main
+```
+
+### 11.3 Commit 信息规范
+
+采用 **`<type>: <简短描述>`** 格式，中文或英文均可，保持一致性即可。
+
+| type | 用途 | 示例 |
+|------|------|------|
+| `feat` | 新功能 | `feat: 增加干跑模式 dry_run 参数` |
+| `fix` | 问题修复 | `fix: 修复 odom TF 双重发布冲突` |
+| `refactor` | 代码重构 | `refactor: 将导航超时抽取到 strategy.yaml` |
+| `docs` | 文档更新 | `docs: 补充 Git 协作指南` |
+| `chore` | 杂项（配置、构建等） | `chore: 统一 TCP 默认端口为 9999` |
+
+**原则**：
+- 一个 commit 只做一件事，便于事后 `git bisect` 定位问题。
+- 不要提交调试用的临时文件（`*.pyc`、`__pycache__/`、`.vscode/` 等），已通过 `.gitignore` 排除。
+- **不要提交凭据或 IP 地址等敏感信息**。
+
+### 11.4 .gitignore 补充
+
+以下模式已在仓库根目录 `.gitignore` 中配置，如需追加：
+
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ROS
+build/
+devel/
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# 音频和模板（较大，通过其他方式同步）
+*.wav
+templates/
+```
+
+### 11.5 小车 ↔ 开发机同步
+
+比赛现场网络环境不确定，建议用 U 盘或 `scp` 同步：
+
+```bash
+# 从开发机推到小车（在开发机上执行）
+scp -r ~/Smart-Pharmacy/pharmacy_mplus0/ EPRobot@<小车IP>:~/robot_ws/src/pharmacy_mplus0/
+
+# 从小车拉回开发机（在开发机上执行）
+scp -r EPRobot@<小车IP>:~/robot_ws/src/pharmacy_mplus0/ ~/Smart-Pharmacy/pharmacy_mplus0/
+```
+
+> `scp` 之前建议在源端先 `git add -A && git commit` 保存当前状态，避免覆盖未保存的工作。
+
+### 11.6 回滚错误修改
+
+```bash
+# 查看最近提交记录
+git log --oneline -10
+
+# 回滚某个文件到上次提交的状态
+git checkout -- <文件路径>
+
+# 回滚到某个历史提交（保留工作区修改）
+git revert <commit-hash>
+
+# 查看两个提交之间的差异
+git diff main..dev -- pharmacy_mplus0/
+```
+
+### 11.7 赛前检查清单
+
+每次在小车上部署前执行：
+
+```bash
+cd ~/robot_ws/src/Smart-Pharmacy
+
+# 1. 确认在正确分支
+git branch
+# 应显示 * main
+
+# 2. 确认无未提交修改
+git status
+
+# 3. 查看最近提交，确认版本
+git log --oneline -5
+
+# 4. 确保 Python 脚本有执行权限（Windows 下提交后权限可能丢失）
+chmod +x pharmacy_mplus0/scripts/*.py
+chmod +x pharmacy_mplus0_debug/scripts/*.py
+```

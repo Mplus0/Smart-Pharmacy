@@ -23,7 +23,7 @@
   
     <!-- robot with lidar -->
     <include file="$(find robot_navigation)/launch/robot_lidar.launch">
-          <!--arg name="lidar_mode"            value="$(arg lidar_mode)"/-->
+          <arg name="lidar_mode"            value="$(arg lidar_mode)"/>
 		  <arg name="is_send_anger"            value="$(arg is_send_anger)"/>
     </include>
     <!-- Map server -->

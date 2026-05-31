@@ -2,7 +2,7 @@
   <!-- Arguments -->
   <arg name="cmd_vel_topic" default="cmd_vel" />
   <arg name="odom_topic" default="odom" />
-  <arg name="planner"  default="dwa" doc="opt: dwa, teb"/> 
+  <arg name="planner"  default="teb" doc="opt: dwa, teb"/>
   <arg name="simulation" default= "false"/> 
   <!--remap from="/odom" to="/odometry/filtered"/-->
   <remap from="scan" to="scan_filtered" />

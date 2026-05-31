@@ -93,8 +93,22 @@ NAV_CLEAR_COSTMAPS_SRV = "/move_base/clear_costmaps"
 # 默认导航超时。当 strategy.yaml 不可用或未提供 nav_default_seconds 时使用。
 NAV_DEFAULT_TIMEOUT_SEC = 40.0
 
-# competition_io 播报格式模板。
-ANNOUNCE_EXAM_SAMPLES = "取到{0}窗口的样本"
-ANNOUNCE_BOARD2_IDLE = "化验区空闲中,请快速通过"
-ANNOUNCE_BOARD2_BUSY = "化验区忙碌中,需等待{0}秒"
-ANNOUNCE_LAB_ARRIVAL = "到达{0}，样本数为{1}"
+# 识别板二忙碌秒数范围。
+BOARD2_BUSY_SECONDS_MIN = 5
+BOARD2_BUSY_SECONDS_MAX = 10
+
+# 化验窗口编号 → 音频 event_id 片段。
+LAB_WINDOW_AUDIO_KEYS = {
+    "1": "blood",
+    "2": "bodyfluid",
+    "3": "immunity",
+    "4": "hormone",
+}
+
+# 样本类型编号 → 音频 event_id 片段。
+SAMPLE_TYPE_AUDIO_KEYS = {
+    "1": "venous_blood",
+    "2": "saliva",
+    "3": "tissue",
+    "4": "plasma",
+}

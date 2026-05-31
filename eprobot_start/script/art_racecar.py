@@ -159,7 +159,7 @@ class BaseControl:
         self.battery_freq = float(rospy.get_param('~battery_freq','1'))
         self.cmd_vel_topic= rospy.get_param('~cmd_vel_topic','/cmd_vel')   #need to set from launch
         self.feedback_vel_topic= rospy.get_param('~feedback_vel_topic','/feedback_vel')
-        self.wheelbase = rospy.get_param('~wheelbase', 0.335)
+        self.wheelbase = rospy.get_param('~wheelbase', 0.210)
         self.imu_topic = rospy.get_param('~imu_topic','/imu_data')#_data
         self.kp = rospy.get_param('~base_kp',1000.0)
         self.ki = rospy.get_param('~base_ki',100.0)
@@ -482,7 +482,7 @@ class BaseControl:
         imu_msg.orientation= orientation 
         imu_msg.angular_velocity.z = Vyaw
         self.imu_pub.publish(imu_msg)
-        if self.is_pub_odom_tf == 'true':
+        if self.is_pub_odom_tf == 'false':
             self.tf_broadcaster.sendTransform((self.pose_x,self.pose_y,0.0),pose_quat,self.current_time,self.baseId,self.odomId)
         self.pub.publish(msg)
 

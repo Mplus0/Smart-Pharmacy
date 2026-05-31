@@ -13,18 +13,17 @@
 
   <group unless="$(arg simulation)">
   
-    <!-- TF 节点已在 EPRobot_start.launch 中定义，此处注释避免重名冲突 -->
-    <!-- <node pkg="tf" type="static_transform_publisher" name="base_to_link" args="0.00 0 0 0 0 0 base_footprint base_link 100" /> -->
- 	<!-- <node pkg="tf" type="static_transform_publisher" name="base_to_gyro"  args="0.08 0 0 0 0 0 base_link IMU_link 100" /> -->
-	<!-- <node pkg="tf" type="static_transform_publisher" name="base_to_laser" args="0.14 0 0.11 0 0 0 base_link base_laser_link 100" /> -->
-	<!-- <node pkg="tf" type="static_transform_publisher" name="base_to_camera" args="0.14 0 0.11 0 0 0 base_link camera_link 100" /> -->
+    <node pkg="tf" type="static_transform_publisher" name="base_to_link" args="0.00 0 0 0 0 0 base_footprint base_link 100" />
+ 	<node pkg="tf" type="static_transform_publisher" name="base_to_gyro"  args="0.08 0 0 0 0 0 base_link IMU_link 100" />
+	<node pkg="tf" type="static_transform_publisher" name="base_to_laser" args="0.14 0 0.11 0 0 0 base_link base_laser_link 100" />
+	<node pkg="tf" type="static_transform_publisher" name="base_to_camera" args="0.14 0 0.11 0 0 0 base_link camera_link 100" />
   
   
   
-    <!-- robot_lidar.launch 中所有硬件节点已在 EPRobot_start.launch 中定义，注释避免重名 -->
-    <!-- <include file="$(find robot_navigation)/launch/robot_lidar.launch">
-          <arg name="lidar_mode" value="$(arg lidar_mode)"/>
-    </include> -->
+    <!-- robot with lidar -->
+    <include file="$(find robot_navigation)/launch/robot_lidar.launch">
+          <!--arg name="lidar_mode"            value="$(arg lidar_mode)"/-->
+    </include>
     <!-- Map server -->
     <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)">
       <param name="frame_id" value="map"/>

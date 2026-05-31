@@ -35,11 +35,14 @@ DEFAULT_STRATEGY_FILE = "strategy.yaml"
 class NavigationClient(object):
     """封装 move_base 导航，对外暴露逻辑名称（如 exam_A / lab_1）。"""
 
-    def __init__(self, waypoints_path=None, strategy_path=None):
+    def __init__(self, waypoints_path=None, strategy_path=None, dry_run=False):
         """初始化导航客户端。
 
         waypoints_path / strategy_path 支持外部注入，便于单元测试。
         未指定时通过 rospkg 从 pharmacy_mplus0/config 目录加载。
+
+        dry_run=True 时跳过 move_base，go_to() 始终返回 True，
+        用于无导航的调试场景（如 test_full_dryrun.launch）。
         """
         # 加载航点配置 (waypoints.yaml)
         if waypoints_path is None:
@@ -59,6 +62,9 @@ class NavigationClient(object):
                 "nav_default_seconds", NAV_DEFAULT_TIMEOUT_SEC
             )
         )
+
+        # 干跑模式：跳过 move_base，go_to 始终返回 True。
+        self._dry_run = dry_run
 
         # 创建 move_base action 客户端。
         # 注意：SimpleActionClient 创建时不等待服务器，由 _ensure_server 按需等待。
@@ -87,11 +93,19 @@ class NavigationClient(object):
                            timeouts.nav_default_seconds。
 
         返回:
-            True  导航成功（move_base 返回 SUCCEEDED）。
+            True  导航成功（move_base 返回 SUCCEEDED，或干跑模式）。
             False 导航失败（超时、取消、被抢占、中止或目标点不存在）。
         """
         if timeout_sec is None:
             timeout_sec = self._nav_timeout
+
+        # 干跑模式：跳过真实导航，直接返回成功。
+        if self._dry_run:
+            rospy.loginfo(
+                "[NavigationClient] [DRY-RUN] 跳过导航 %s -> 模拟成功",
+                waypoint_name,
+            )
+            return True
 
         goal = self._build_goal(waypoint_name)
         if goal is None:

@@ -19,7 +19,7 @@
 
       # 修改裁判 IP / 车号
       roslaunch pharmacy_mplus0 race_bringup.launch \
-        server_ip:=192.168.12.100 car_id:=2 tts_method:=silent
+        server_ip:=192.168.12.100 car_id:=2 audio_dir:=""
   -->
 
   <!-- ── 基础系统开关 ───────────────────────────── -->
@@ -39,7 +39,9 @@
   <arg name="server_ip"   default="192.168.124.2" doc="裁判电脑 IP"/>
   <arg name="server_port" default="9999"           doc="裁判软件端口"/>
   <arg name="car_id"      default="1"              doc="小车编号"/>
-  <arg name="tts_method"  default="espeak"         doc="语音方式"/>
+  <arg name="audio_dir"    default="$(find pharmacy_mplus0)/audio" doc="wav 音频目录，空字符串禁用"/>
+  <arg name="audio_player" default="aplay"  doc="音频播放器"/>
+  <arg name="allow_overlap" default="false" doc="是否允许重叠播放"/>
 
   <!-- ── 一、基础系统 ───────────────────────────── -->
   <include file="$(find pharmacy_mplus0)/launch/base_camera_nav.launch">
@@ -57,7 +59,9 @@
       <arg name="server_ip"   value="$(arg server_ip)"/>
       <arg name="server_port" value="$(arg server_port)"/>
       <arg name="car_id"      value="$(arg car_id)"/>
-      <arg name="tts_method"  value="$(arg tts_method)"/>
+      <arg name="audio_dir"     value="$(arg audio_dir)"/>
+      <arg name="audio_player"  value="$(arg audio_player)"/>
+      <arg name="allow_overlap" value="$(arg allow_overlap)"/>
     </include>
   </group>
 
