@@ -86,37 +86,85 @@ if self.is_pub_odom_tf == 'false':
 
 #### 问题描述
 
-`tcp_reporter.py` 代码中 `_DEFAULT_SERVER_PORT` 硬编码为 `8888`，而所有 launch 文件
+`tcp_reporter.py` 代码中 `_DEFAULT_SERVER_PORT` 硬编码为 `9999`，而所有 launch 文件
 (`main.launch`、`reporter.launch`、`race_bringup.launch`) 和 `tcp.yaml` 配置文件中
-默认端口均为 `9999`。
+默认端口均为 `8888`。
 
 如果用户直接通过 `rosrun pharmacy_mplus0 tcp_reporter.py` 启动节点
-（不经过 launch 文件传入 `~server_port`），节点会使用 `8888` 作为目标端口，
-而裁判软件实际监听的是 `9999`，导致 TCP 连接失败。
+（不经过 launch 文件传入 `~server_port`），节点会使用 `9999` 作为目标端口，
+而裁判软件实际监听的是 `8888`，导致 TCP 连接失败。
 
 #### 修改内容
 
 | 文件 | 行号 | 参数 | 原值 | 新值 |
 |------|------|------|------|------|
-| `tcp_reporter.py` | 75 | `_DEFAULT_SERVER_PORT` | `8888` | `9999` |
+| `tcp_reporter.py` | 75 | `_DEFAULT_SERVER_PORT` | `9999` | `8888` |
 
 ```python
 # 修改前
-_DEFAULT_SERVER_PORT = 8888
+_DEFAULT_SERVER_PORT = 9999
 
 # 修改后
-_DEFAULT_SERVER_PORT = 9999
+_DEFAULT_SERVER_PORT = 8888
 ```
 
-#### 受影响文件（端口 9999 一致性已验证）
+#### 受影响文件（端口 8888 一致性已验证）
 
 | 文件 | 参数/字段 | 值 |
 |------|-----------|-----|
-| `pharmacy_mplus0/launch/main.launch` | `server_port` | `"9999"` |
-| `pharmacy_mplus0/launch/reporter.launch` | `server_port` | `"9999"` |
-| `pharmacy_mplus0/launch/race_bringup.launch` | `server_port` | `"9999"` |
-| `pharmacy_mplus0/config/tcp.yaml` | `server.port` | `9999` |
-| `pharmacy_mplus0/scripts/tcp_reporter.py` | `_DEFAULT_SERVER_PORT` | `9999` (已修正) |
+| `pharmacy_mplus0/launch/main.launch` | `server_port` | `"8888"` |
+| `pharmacy_mplus0/launch/reporter.launch` | `server_port` | `"8888"` |
+| `pharmacy_mplus0/launch/race_bringup.launch` | `server_port` | `"8888"` |
+| `pharmacy_mplus0/config/tcp.yaml` | `server.port` | `8888` |
+| `pharmacy_mplus0/scripts/tcp_reporter.py` | `_DEFAULT_SERVER_PORT` | `8888` (已修正) |
+
+---
+
+### #8 移除 strategy.yaml 中未使用的 `dual_car_publish_allow_when_returning` 配置
+
+| 项目 | 内容 |
+|------|------|
+| **日期** | 2026-06-01 |
+| **文件** | `pharmacy_mplus0/config/strategy.yaml` |
+| **修改类型** | 清理死配置 |
+| **严重程度** | P3 - 配置与代码行为不一致 |
+
+#### 问题描述
+
+`strategy.yaml` 第 49 行定义了 `dual_car_publish_allow_when_returning: true`，但 `main_controller.py` 的 `__init__` 从未读取该配置。`_dual_publish_allow_peer_start()` 仅检查 `_dual_car_enabled` 和 `_dual_allow_sent_this_round`，不会因为这个 YAML 值为 `false` 而跳过发送。
+
+此外，该配置本身是冗余的——用户启用 `dual_car_enabled: true` 即表示需要双车循环协作，"不放行对车"的使用场景不存在。
+
+#### 后果
+
+- 如果用户在 YAML 中将该项改为 `false`，期望阻止放行，但实际放行照常发生，配置与实际行为不一致
+- 增加后续维护者的理解成本
+
+#### 修改内容
+
+从 `strategy.yaml` 中直接删除该行（第 49 行）：
+
+```yaml
+# 删除前
+dual_car_signal_topic: "/dual_car_signal"
+# 完成配送后是否发布允许对车出发信号。
+dual_car_publish_allow_when_returning: true
+
+# 删除后
+dual_car_signal_topic: "/dual_car_signal"
+```
+
+#### 受影响检查
+
+| 检查项 | 结论 |
+|--------|------|
+| `main_controller.py` 读取 `strategy.get("dual_car_publish_allow_when_returning", ...)` | 不读取，无影响 |
+| `_dual_publish_allow_peer_start()` 行为 | 不变，始终在配送完成后放行对车 |
+| 双车循环逻辑 | 无任何影响 |
+
+#### 排查提示
+
+如果后续现场调试时发现双车模式下仍能正常放行对车但 YAML 中找不到 `dual_car_publish_allow_when_returning`，说明该配置已从 YAML 中移除，放行行为由 `dual_car_enabled` 控制，属于正常现象。
 
 ---
 

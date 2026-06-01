@@ -24,6 +24,7 @@ from pharmacy_mplus0.constants import (
     TOPIC_CV2_RESULT,
     TOPIC_ANNOUNCE_REQUEST,
     TOPIC_CURRENT_QR_TASK,
+    TOPIC_DUAL_CAR_SIGNAL,
     LAB_WINDOW_AUDIO_KEYS,
     SAMPLE_TYPE_AUDIO_KEYS,
     BOARD2_BUSY_SECONDS_MIN,
@@ -35,7 +36,9 @@ from pharmacy_mplus0.constants import (
 class CompetitionIO(object):
     """统一发布比赛裁判可见状态和播报请求。"""
 
-    def __init__(self):
+    def __init__(self, car_id="1"):
+        self._car_id = str(car_id)
+
         # ---- 裁判评分可见话题 ----
         # task: 当前小车所在位置或执行的动作类型。
         self._pub_task = rospy.Publisher(
@@ -56,6 +59,10 @@ class CompetitionIO(object):
         # current_qr_task: 当前正在执行的二维码任务（双车协作预留）。
         self._pub_qr_task = rospy.Publisher(
             TOPIC_CURRENT_QR_TASK, String, queue_size=5
+        )
+        # dual_car_signal: 双车轮流出发信号发布器。
+        self._pub_dual_signal = rospy.Publisher(
+            TOPIC_DUAL_CAR_SIGNAL, String, queue_size=5
         )
 
         rospy.loginfo("[CompetitionIO] 裁判状态发布器已初始化")
@@ -160,14 +167,30 @@ class CompetitionIO(object):
 
     # ---- 双车协作预留 -----------------------------------------------
 
+    def publish_dual_signal(self, text):
+        """发布双车协作信号（如 ALLOW_START:1 / ALLOW_START:2）。
+
+        参数:
+            text: 信号内容，如 "ALLOW_START:2"。
+        """
+        msg = String()
+        msg.data = str(text)
+        self._pub_dual_signal.publish(msg)
+
     def publish_qr_task(self, code, lab_window):
         """发布当前正在执行的二维码任务，供同伴小车避让。
+
+        格式: CAR<id>:<code>-<lab_window>，如 CAR1:AB-1。
+        清空时 code="" 且 lab_window=""，发布 CAR<id>:。
 
         参数:
             code:       二维码内容。
             lab_window: 目标化验窗口。
         """
-        body = "{0}-{1}".format(code, lab_window)
+        if code or lab_window:
+            body = "CAR{0}:{1}-{2}".format(self._car_id, code, lab_window)
+        else:
+            body = "CAR{0}:".format(self._car_id)
         msg = String()
         msg.data = body
         self._pub_qr_task.publish(msg)

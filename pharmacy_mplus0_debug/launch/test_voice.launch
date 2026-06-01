@@ -25,7 +25,7 @@
     <param name="audio_player"  value="$(arg audio_player)"/>
     <param name="allow_overlap" value="$(arg allow_overlap)"/>
     <param name="server_ip"     value="127.0.0.1"/>
-    <param name="server_port"   value="9999"/>
+    <param name="server_port"   value="8888"/>
   </node>
 
   <!-- 发送测试音频事件 ID -->

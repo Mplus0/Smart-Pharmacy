@@ -16,7 +16,7 @@
 - **裁判状态上报**：通过 TCP 向裁判软件上报速度、坐标、任务状态、CV1、CV2。
 - **语音播报**：在体检区取样、识别板二、化验区投递等节点按规则播报。
 - **样本追踪**：记录每轮携带的样本类型和窗口，投递时校验收发一致性。
-- **双车协作预留**：通过 `/current_qr_task` 广播当前任务，单车模式不影响。
+- **双车循环协作**：通过 `/dual_car_signal` 实现轮流出发，`/current_qr_task` 排除任务占用。单车模式默认关闭，不受影响。
 
 适用场景：正式比赛（`race_bringup.launch`）、业务层调试（`main.launch`）、识别节点单独验证（`detectors.launch`）。
 
@@ -130,7 +130,7 @@ main_single.launch → main.launch (audio_dir="")
 | 文件路径 | 作用说明 | 关键字段 |
 | --- | --- | --- |
 | `config/waypoints.yaml` | 所有航点坐标及窗口映射 | `frames.map`, `frames.robot`, `waypoints.exam_A~C`, `waypoints.lab_1~4`, `waypoints.start/board1/board2`, `exam_waypoints`, `lab_waypoints` |
-| `config/strategy.yaml` | 比赛策略和超时参数 | `dwell.exam_seconds`(1.5), `timeouts.board1_wait_seconds`(15), `visit_order`, `rounds.round_return_to_start` |
+| `config/strategy.yaml` | 比赛策略和超时参数 | `dwell.exam_seconds`(1.5), `timeouts.board1_wait_seconds`(15), `visit_order`, `rounds.round_return_to_start`, `dual_car_enabled` |
 | `config/tcp.yaml` | TCP 上报参数 | `server.ip`(192.168.12.16), `server.port`(8888), `report.car_id`, `report.hz`(2.0) |
 | `config/vision.yaml` | 视觉识别参数 | `camera.stream_url`, `board1.rotate_degrees/stable_frames/pyzbar_symbols`（旧 Canny/轮廓参数已弃用保留）, `board2.match_threshold`(0.72) |
 
@@ -226,11 +226,34 @@ roslaunch pharmacy_mplus0 race_bringup.launch \
 # 使用 DWA 规划器（默认 teb）
 roslaunch pharmacy_mplus0 base_camera_nav.launch planner:=dwa
 
-# 2 号车静默模式
+# 2 号车静默模式（或双车跟车）
 roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2 audio_dir:=""
+
+# 2 号车双车模式（等待车 1 放行）
+roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2 dual_car_enabled:=true audio_dir:=""
 ```
 
-### 5.4 离线逻辑自检（无需 ROS）
+### 5.4 双车协作启动
+
+```bash
+# 车 1（主车，先出发，完整功能）
+roslaunch pharmacy_mplus0 race_bringup.launch \
+  car_id:=1 dual_car_enabled:=true
+
+# 车 2（跟车，初始等待，静默模式）
+roslaunch pharmacy_mplus0 race_bringup.launch \
+  car_id:=2 dual_car_enabled:=true audio_dir:=""
+
+# 覆盖首发车
+roslaunch pharmacy_mplus0 race_bringup.launch \
+  car_id:=2 dual_car_enabled:=true dual_car_start_first_car_id:=2
+```
+
+双车循环流程：车 1 先出发执行配送 → 完成配送时发布 `ALLOW_START:2` → 车 2 出发 → 车 2 完成配送时发布 `ALLOW_START:1` → 循环。
+
+详细说明见 [README_DUAL_CAR.md](README_DUAL_CAR.md)。
+
+### 5.5 离线逻辑自检（无需 ROS）
 
 ```bash
 cd ~/robot_ws/src/pharmacy_mplus0
@@ -288,6 +311,7 @@ python scripts/verify_logic.py
 | `server_ip` | main, race_bringup, reporter | 192.168.12.16 | 裁判电脑 IP |
 | `server_port` | 同上 | 8888 | 裁判软件端口 |
 | `car_id` | 同上 | "1" | 小车编号 |
+| `dual_car_enabled` | main, race_bringup | false | 是否启用双车循环协作 |
 | `audio_dir` | main, race_bringup, reporter | $(find pharmacy_mplus0)/audio | wav 音频文件目录，设为空字符串可禁用语音 |
 | `audio_player` | 同上 | aplay | 音频播放器：aplay/paplay/ffplay |
 | `allow_overlap` | 同上 | false | 是否允许音频重叠播放 |
@@ -333,7 +357,8 @@ python scripts/verify_logic.py
 | --- | --- | --- | --- | --- |
 | `/current_task` | `String` | main_controller | tcp_reporter | 当前任务："A"/"B"/"C"/"1"/"2"/"3"/"4"/"R" |
 | `/cv2_result` | `String` | main_controller | tcp_reporter | 识别板一任务结果："AB-1" |
-| `/current_qr_task` | `String` | main_controller | —（双车预留） | 当前执行的二维码任务 |
+| `/current_qr_task` | `String` | main_controller | main_controller（双车） | 当前任务占用，格式 `CAR<id>:<code>-<lab_window>` |
+| `/dual_car_signal` | `String` | main_controller | main_controller（双车） | 轮流出发信号，格式 `ALLOW_START:<id>` |
 | `/announce_request` | `String` | main_controller | tcp_reporter | 音频事件 ID（如 board2_idle、lab_blood_3） |
 | `/reset_detection` | `String` | main_controller | board1_detector, board2_detector | 通知识别节点解锁，重新识别 |
 
@@ -526,6 +551,7 @@ chmod +x ~/robot_ws/src/pharmacy_mplus0/scripts/*.py
 | 调整视觉参数 | `config/vision.yaml` |
 | 修改 TCP 上报格式/频率 | `config/tcp.yaml` + `scripts/tcp_reporter.py` |
 | 修改状态机流程 | `scripts/main_controller.py` |
+| 修改双车协作行为 | `config/strategy.yaml` + `scripts/main_controller.py`（参考 `README_DUAL_CAR.md`） |
 | 修改任务选择逻辑 | `src/pharmacy_mplus0/task_planner.py` |
 | 修改导航行为 | `src/pharmacy_mplus0/navigation_client.py` |
 | 修改播报音频映射 | `src/pharmacy_mplus0/constants.py` 的 `LAB_WINDOW_AUDIO_KEYS` / `SAMPLE_TYPE_AUDIO_KEYS` |
@@ -596,7 +622,7 @@ git push origin fix/board1-timeout
 | `fix` | 问题修复 | `fix: 修复 odom TF 双重发布冲突` |
 | `refactor` | 代码重构 | `refactor: 将导航超时抽取到 strategy.yaml` |
 | `docs` | 文档更新 | `docs: 补充 Git 协作指南` |
-| `chore` | 杂项（配置、构建等） | `chore: 统一 TCP 默认端口为 9999` |
+| `chore` | 杂项（配置、构建等） | `chore: 统一 TCP 默认端口为 8888` |
 
 **原则**：
 - 一个 commit 只做一件事，便于事后 `git bisect` 定位问题。

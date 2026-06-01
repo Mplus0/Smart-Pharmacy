@@ -12,7 +12,7 @@
   <arg name="stream_url"
        default="http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"/>
   <arg name="server_ip"   default="192.168.124.2"/>
-  <arg name="server_port" default="9999"/>
+  <arg name="server_port" default="8888"/>
   <arg name="car_id"      default="1"/>
   <arg name="audio_dir"   default=""/>
 

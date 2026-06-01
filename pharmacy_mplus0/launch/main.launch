@@ -27,13 +27,14 @@
        default="http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"
        doc="web_video_server 提供的 HTTP 视频流地址"/>
   <arg name="server_ip"   default="192.168.124.2" doc="裁判电脑 IP"/>
-  <arg name="server_port" default="9999"           doc="裁判软件监听端口"/>
+  <arg name="server_port" default="8888"           doc="裁判软件监听端口"/>
   <arg name="car_id"      default="1"              doc="小车编号"/>
   <arg name="audio_dir"
        default="$(find pharmacy_mplus0)/audio"
        doc="wav 音频文件目录，设为空字符串可禁用语音"/>
   <arg name="audio_player"  default="aplay"  doc="音频播放器: aplay / paplay / ffplay"/>
   <arg name="allow_overlap" default="false"  doc="是否允许音频重叠播放"/>
+  <arg name="dual_car_enabled" default="false" doc="是否启用双车循环协作"/>
 
   <!-- ── 识别板一检测节点 ───────────────────────── -->
   <node name="board1_detector"
@@ -64,6 +65,9 @@
   <!-- ── 主控状态机节点 ────────────────────────── -->
   <node name="main_controller"
         pkg="pharmacy_mplus0" type="main_controller.py"
-        output="screen" respawn="false" required="true"/>
+        output="screen" respawn="false" required="true">
+    <param name="car_id"           value="$(arg car_id)"/>
+    <param name="dual_car_enabled" value="$(arg dual_car_enabled)"/>
+  </node>
 
 </launch>

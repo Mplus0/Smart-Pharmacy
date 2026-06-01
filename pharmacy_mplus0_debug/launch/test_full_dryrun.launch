@@ -24,7 +24,7 @@
         pkg="pharmacy_mplus0" type="tcp_reporter.py"
         output="screen">
     <param name="server_ip"   value="127.0.0.1"/>
-    <param name="server_port" value="9999"/>
+    <param name="server_port" value="8888"/>
     <param name="car_id"      value="$(arg car_id)"/>
     <param name="audio_dir"     value="$(arg audio_dir)"/>
     <param name="audio_player"  value="$(arg audio_player)"/>

@@ -37,11 +37,12 @@
        default="http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"
        doc="摄像头 HTTP 视频流"/>
   <arg name="server_ip"   default="192.168.124.2" doc="裁判电脑 IP"/>
-  <arg name="server_port" default="9999"           doc="裁判软件端口"/>
+  <arg name="server_port" default="8888"           doc="裁判软件端口"/>
   <arg name="car_id"      default="1"              doc="小车编号"/>
   <arg name="audio_dir"    default="$(find pharmacy_mplus0)/audio" doc="wav 音频目录，空字符串禁用"/>
   <arg name="audio_player" default="aplay"  doc="音频播放器"/>
   <arg name="allow_overlap" default="false" doc="是否允许重叠播放"/>
+  <arg name="dual_car_enabled" default="false" doc="是否启用双车循环协作"/>
 
   <!-- ── 一、基础系统 ───────────────────────────── -->
   <include file="$(find pharmacy_mplus0)/launch/base_camera_nav.launch">
@@ -62,6 +63,7 @@
       <arg name="audio_dir"     value="$(arg audio_dir)"/>
       <arg name="audio_player"  value="$(arg audio_player)"/>
       <arg name="allow_overlap" value="$(arg allow_overlap)"/>
+      <arg name="dual_car_enabled" value="$(arg dual_car_enabled)"/>
     </include>
   </group>
 

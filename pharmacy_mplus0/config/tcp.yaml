@@ -4,7 +4,7 @@ server:
   # 裁判电脑 IP，现场可通过 launch 参数覆盖。
   ip: 192.168.124.2
   # 裁判软件监听端口。
-  port: 9999
+  port: 8888
   # 单次 connect 的超时时间，过长会拖慢重连。
   connect_timeout_seconds: 1.0
   # 断线后多久尝试重连一次。

@@ -3,15 +3,15 @@
     test_reporter.launch — 启动 TCP 假服务端 + tcp_reporter 验证上报
 
     用途: 在没有裁判软件时验证 TCP 上报格式和频率。
-    假服务端在 0.0.0.0:9999 监听，接收并打印每条 JSON。
+    假服务端在 0.0.0.0:8888 监听，接收并打印每条 JSON。
 
     用法:
       roslaunch pharmacy_mplus0_debug test_reporter.launch
-      roslaunch pharmacy_mplus0_debug test_reporter.launch port:=9999
+      roslaunch pharmacy_mplus0_debug test_reporter.launch port:=8888
   -->
 
   <arg name="server_ip"   default="127.0.0.1" doc="TCP 上报目标 IP"/>
-  <arg name="server_port" default="9999"      doc="TCP 端口"/>
+  <arg name="server_port" default="8888"      doc="TCP 端口"/>
   <arg name="car_id"      default="1"         doc="小车编号"/>
   <arg name="audio_dir"    default=""            doc="wav 音频目录，空字符串禁用"/>
   <arg name="audio_player" default="aplay"       doc="音频播放器"/>

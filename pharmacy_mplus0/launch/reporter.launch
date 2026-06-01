@@ -13,7 +13,7 @@
   -->
 
   <arg name="server_ip"   default="192.168.124.2" doc="裁判电脑 IP"/>
-  <arg name="server_port" default="9999"           doc="裁判软件端口"/>
+  <arg name="server_port" default="8888"           doc="裁判软件端口"/>
   <arg name="car_id"      default="1"              doc="小车编号"/>
   <arg name="audio_dir"
        default="$(find pharmacy_mplus0)/audio"

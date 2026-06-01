@@ -6,11 +6,11 @@
 用于在没有裁判软件时验证上报格式和频率。
 
 用法:
-  # 默认端口 9999
+  # 默认端口 8888
   rosrun pharmacy_mplus0_debug tcp_fake_server.py
 
   # 自定义端口
-  rosrun pharmacy_mplus0_debug tcp_fake_server.py _port:=9999
+  rosrun pharmacy_mplus0_debug tcp_fake_server.py _port:=8888
 """
 
 from __future__ import print_function
@@ -29,7 +29,7 @@ class FakeTcpServer(object):
     def __init__(self):
         rospy.init_node("tcp_fake_server", anonymous=True)
 
-        port = int(rospy.get_param("~port", 9999))
+        port = int(rospy.get_param("~port", 8888))
         self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server.setsockopt(
             socket.SOL_SOCKET, socket.SO_REUSEADDR, 1

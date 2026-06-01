@@ -60,6 +60,7 @@ from pharmacy_mplus0.constants import (
     TOPIC_BOARD2_STATUS,
     TOPIC_RESET_DETECTION,
     TOPIC_CMD_VEL,
+    TOPIC_CURRENT_QR_TASK,
     TASK_ROAD,
 )
 from pharmacy_mplus0.navigation_client import NavigationClient
@@ -108,6 +109,37 @@ class MainController(object):
         rounds = strategy.get("rounds", {})
         self._return_to_start = rounds.get("round_return_to_start", True)
 
+        # ---- 双车协作配置 --------------------------------------------
+        self._dual_car_enabled = strategy.get("dual_car_enabled", False)
+        self._car_id = str(rospy.get_param("~car_id", "1"))
+        self._dual_signal_topic = strategy.get(
+            "dual_car_signal_topic", "/dual_car_signal"
+        )
+        start_first_id = str(
+            strategy.get("dual_car_start_first_car_id", "1")
+        )
+
+        self._dual_waiting_at_start = False
+        self._dual_start_allowed = True
+        self._dual_allow_sent_this_round = False
+
+        if self._dual_car_enabled:
+            if self._car_id == start_first_id:
+                self._dual_start_allowed = True
+                self._dual_waiting_at_start = False
+            else:
+                self._dual_start_allowed = False
+                self._dual_waiting_at_start = True
+
+        # ---- 远程任务共享预留（默认关闭，不改主流程）-----------------
+        self._dual_remote_task_enabled = strategy.get(
+            "dual_car_remote_task_enabled", False
+        )
+        self._dual_remote_task_max_age_sec = strategy.get(
+            "dual_car_remote_task_max_age_sec", 45.0
+        )
+        self._dual_assigned_remote_task = None
+
         # 访问顺序和任务优先级传给 TaskPlanner。
         visit_order = strategy.get("visit_order", None)
         prefer_more = strategy.get("task_priority", {}).get(
@@ -121,7 +153,7 @@ class MainController(object):
 
         # ---- 初始化子模块 --------------------------------------------
         self._nav = NavigationClient(dry_run=self._dry_run)
-        self._io = CompetitionIO()
+        self._io = CompetitionIO(car_id=self._car_id)
         self._store = SampleStore()
         self._planner = TaskPlanner(visit_order=visit_order)
 
@@ -156,6 +188,19 @@ class MainController(object):
             self._cb_board2_status, queue_size=5,
         )
 
+        # 双车协作：订阅 /dual_car_signal，仅在启用时。
+        if self._dual_car_enabled:
+            rospy.Subscriber(
+                self._dual_signal_topic, String,
+                self._cb_dual_car_signal, queue_size=5,
+            )
+
+        # 订阅对车的 /current_qr_task，用于任务占用排除。
+        rospy.Subscriber(
+            TOPIC_CURRENT_QR_TASK, String,
+            self._cb_peer_qr_task, queue_size=5,
+        )
+
         # ---- 运行状态 ------------------------------------------------
         self._state = STATE_INIT
         self._round_index = 0
@@ -170,6 +215,9 @@ class MainController(object):
         # 本轮任务上下文。
         self._round_plan = None
         self._exam_visit_idx = 0
+
+        # 双车协作：对车占用的方框索引，None 表示无占用。
+        self._peer_occupied_box = None
 
         self._print_banner()
         loginfo("[Main] 主控初始化完成")
@@ -226,6 +274,194 @@ class MainController(object):
         except (ValueError, KeyError, TypeError):
             pass
 
+    # ---- 双车协作回调 -----------------------------------------------
+
+    def _dual_peer_id(self):
+        """返回对车编号：1→2, 2→1。"""
+        return "2" if self._car_id == "1" else "1"
+
+    def _cb_dual_car_signal(self, msg):
+        """接收 /dual_car_signal，处理 ALLOW_START 和 ALLOW_START_WITH_TASK。
+
+        简单格式: ALLOW_START:<id>
+        JSON 格式: {"type":"ALLOW_START_WITH_TASK","target_car":"2",...}
+        """
+        body = (msg.data or "").strip()
+
+        # 尝试 JSON 解析（远程任务共享，后续优化）。
+        if body.startswith("{"):
+            self._dual_try_parse_remote_task(body)
+            return
+
+        # 简单字符串格式: ALLOW_START:<id>
+        prefix = "ALLOW_START:"
+        if not body.startswith(prefix):
+            return
+
+        target_id = body[len(prefix):].strip()
+        if target_id != self._car_id:
+            return
+
+        if not self._dual_car_enabled:
+            return
+
+        if not self._dual_waiting_at_start:
+            loginfo(
+                "[DualCar] ignored %s because current car is not waiting at start",
+                body,
+            )
+            return
+
+        self._dual_start_allowed = True
+        self._dual_waiting_at_start = False
+        loginfo("[DualCar] received %s, this car can start next round", body)
+
+    def _dual_try_parse_remote_task(self, body):
+        """安全解析 JSON 格式的双车信号（远程任务预留）。
+
+        当前阶段：仅校验格式，提取 ALLOW_START 放行逻辑。
+        即使收到有效远程任务，也不跳过识别板一（默认行为）。
+        """
+        if not self._dual_car_enabled:
+            return
+
+        try:
+            data = json.loads(body)
+        except (ValueError, TypeError):
+            logwarn("[DualCar] invalid JSON in dual_car_signal: %s", body)
+            return
+
+        msg_type = data.get("type", "")
+        target_car = str(data.get("target_car", ""))
+        from_car = str(data.get("from_car", ""))
+
+        # 不是发给自己的，忽略。
+        if target_car != self._car_id:
+            return
+        # 自己发出的，忽略。
+        if from_car == self._car_id:
+            return
+
+        if not self._dual_waiting_at_start:
+            loginfo(
+                "[DualCar] ignored JSON signal because car is not waiting at start"
+            )
+            return
+
+        # 提取远程任务（如果存在）。
+        task = data.get("task")
+        if (
+            task
+            and self._dual_remote_task_enabled
+            and isinstance(task, dict)
+        ):
+            code = task.get("code", "")
+            box = task.get("box")
+            lab_window = task.get("lab_window", "")
+            sample_count = task.get("sample_count", 0)
+            stamp = data.get("stamp", 0)
+
+            # 检查是否过期。
+            now = time.time()
+            if stamp and (now - float(stamp)) > self._dual_remote_task_max_age_sec:
+                loginfo(
+                    "[DualCar] remote task expired (age=%.1fs > max=%.1fs), "
+                    "will go to board1",
+                    now - float(stamp),
+                    self._dual_remote_task_max_age_sec,
+                )
+                self._dual_assigned_remote_task = None
+            elif code and box is not None and lab_window:
+                self._dual_assigned_remote_task = {
+                    "from_car": from_car,
+                    "code": code,
+                    "box": int(box),
+                    "lab_window": str(lab_window),
+                    "sample_count": int(sample_count),
+                    "stamp": stamp,
+                }
+                loginfo(
+                    "[DualCar] cached remote task from car %s: %s box=%d lab=%s",
+                    from_car, code, int(box), lab_window,
+                )
+            else:
+                logwarn(
+                    "[DualCar] remote task fields incomplete, ignored"
+                )
+        else:
+            # 无有效远程任务或功能未启用，仅当作普通放行信号。
+            self._dual_assigned_remote_task = None
+
+        # 无论是否有远程任务，都执行放行逻辑。
+        # 当前阶段不跳过识别板一：后续启用时在此处判断
+        # if self._dual_remote_task_enabled and self._dual_assigned_remote_task:
+        #     # 可跳过识别板一，直接使用缓存任务
+        #     pass
+        self._dual_start_allowed = True
+        self._dual_waiting_at_start = False
+        loginfo("[DualCar] received JSON ALLOW_START from car %s", from_car)
+
+    def _dual_publish_allow_peer_start(self):
+        """完成配送后放行对车：发布 ALLOW_START:<peer_id>。
+
+        仅在双车模式启用、本轮尚未发送过时生效。
+        发送后本车 _dual_start_allowed 置 False，下一轮需等待对车放行。
+        """
+        if not self._dual_car_enabled:
+            return
+        if self._dual_allow_sent_this_round:
+            return
+        peer_id = self._dual_peer_id()
+        msg = "ALLOW_START:%s" % peer_id
+        self._io.publish_dual_signal(msg)
+        self._dual_allow_sent_this_round = True
+        self._dual_start_allowed = False
+        self._dual_waiting_at_start = False
+        loginfo("[DualCar] sent %s, peer can start while this car returns", msg)
+
+    def _cb_peer_qr_task(self, msg):
+        """解析对车广播的 /current_qr_task，提取被占用的 box_index。
+
+        新格式: CAR1:AB-1 或 CAR1: (空任务)。
+        旧格式: AB-1 或空字符串（向后兼容，但因无法区分来源，
+               仅在非双车模式下使用）。
+        """
+        body = (msg.data or "").strip()
+
+        # 尝试解析新格式 CAR<id>:<payload>
+        if body.startswith("CAR") and ":" in body:
+            header, payload = body.split(":", 1)
+            sender_id = header[3:]  # "CAR1" → "1"
+            if sender_id == self._car_id:
+                # 自己发布的消息，忽略。
+                return
+            if not payload:
+                # 对车清空任务占用。
+                self._peer_occupied_box = None
+                return
+            try:
+                code, lab_window = payload.rsplit("-", 1)
+                box_index = int(lab_window) - 1  # lab_window 1-4 → box 0-3
+                if 0 <= box_index <= 3:
+                    self._peer_occupied_box = box_index
+                    loginfo("[Main] 对车占用: box=%d (任务 %s)", box_index, payload)
+            except (ValueError, AttributeError):
+                pass
+            return
+
+        # 旧格式兼容：仅在非双车模式下处理（双车模式下无法区分来源，忽略）。
+        if not body:
+            self._peer_occupied_box = None
+            return
+        if not self._dual_car_enabled:
+            try:
+                code, lab_window = body.rsplit("-", 1)
+                box_index = int(lab_window) - 1
+                if 0 <= box_index <= 3:
+                    self._peer_occupied_box = box_index
+            except (ValueError, AttributeError):
+                pass
+
     # ---- 状态机调度 -------------------------------------------------
 
     def run(self):
@@ -275,6 +511,16 @@ class MainController(object):
 
     def _do_goto_board1(self):
         """前往识别板一。导航失败时保持当前状态自动重试。"""
+        # 双车协作：检查是否允许出发，未允许则保持等待。
+        if self._dual_car_enabled and not self._dual_start_allowed:
+            self._dual_waiting_at_start = True
+            self._cmd_vel_pub.publish(Twist())
+            rospy.sleep(0.1)
+            return
+
+        # 新一轮开始，重置本轮放行标记。
+        self._dual_allow_sent_this_round = False
+
         loginfo("[Main] === GOTO_BOARD1 (即将进入第 %d 轮) ===",
                 self._round_index + 1)
         self._io.set_task_road()
@@ -354,7 +600,10 @@ class MainController(object):
             self._board1_detections = []
 
         # 使用 TaskPlanner 从所有检测结果中选出最优任务。
-        best = self._planner.select_best(self._board1_detections)
+        best = self._planner.select_best(
+            self._board1_detections,
+            excluded_box=self._peer_occupied_box,
+        )
         if best is None:
             logwarn("[Main] 无有效二维码，结束本轮")
             self._consecutive_fails += 1
@@ -530,6 +779,9 @@ class MainController(object):
         loginfo("[Main] === DONE_ROUND === 本轮结束")
         self._io.publish_qr_task("", "")
 
+        # 双车协作：完成配送并准备返回起点时，放行对车。
+        self._dual_publish_allow_peer_start()
+
         if self._return_to_start:
             loginfo("[Main] 返回起点...")
             self._nav.go_to("start", timeout_sec=self._nav_timeout)
@@ -570,6 +822,9 @@ class MainController(object):
                 self._max_consec_fails)
         loginfo("  每轮回起点: %s",
                 "是" if self._return_to_start else "否")
+        loginfo("  双车协作: %s",
+                "启用 (car_id=%s)"
+                % self._car_id if self._dual_car_enabled else "关闭")
         loginfo("=" * 60)
 
 

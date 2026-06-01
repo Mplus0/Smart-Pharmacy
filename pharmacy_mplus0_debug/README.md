@@ -15,6 +15,7 @@
 - **假数据发布器**：模拟 `/cam_return`、`/cv1_result`、`/current_task` 等话题，用于不接摄像头时调试后续流程。
 - **单航点导航测试**：从 `waypoints.yaml` 读取一个航点，发一次 `move_base` 请求，验证停靠精度。
 - **终端仪表盘**：订阅所有关键话题，清屏刷新，替代多个 `rostopic echo` 窗口。
+- **双车协作调试**：通过 `rostopic pub` 模拟 `/dual_car_signal` 和 `/current_qr_task`，无需两辆真车即可验证双车逻辑。
 - **TCP 假服务端**：在本地监听，接收并格式化打印 TCP 上报 JSON，无需裁判软件即可验证上报。
 - **主控干跑**：用假识别数据 + 静默语音启动主控，验证状态机流转。
 
@@ -207,6 +208,69 @@ rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
 
 > `test_full_dryrun.launch` 已默认启用 `dry_run=true`，`NavigationClient` 会打印 `[DRY-RUN]` 日志并直接模拟导航成功。整个状态机可完整流转，无需真实 move_base。主要用于验证：假数据接收 → 任务规划 → 状态切换 → 播报文本 → TCP JSON 格式等逻辑。
 
+### 5.7 双车协作调试（无真车）
+
+```bash
+# 终端 1：启动车 1 主控干跑（先出发）
+roslaunch pharmacy_mplus0_debug test_full_dryrun.launch \
+  car_id:=1 dual_car_enabled:=true
+
+# 终端 2：启动车 2 主控干跑（初始等待）
+roslaunch pharmacy_mplus0_debug test_full_dryrun.launch \
+  car_id:=2 dual_car_enabled:=true
+
+# 终端 3：模拟车 1 到达识别板一向车 1 发送假识别结果
+rosrun pharmacy_mplus0_debug send_fake_cam_return.py _code:=AB _box:=1
+
+# 终端 4：监控双车信号
+rostopic echo /dual_car_signal
+
+# 手动放行（跳过自动流程直接测试）
+rostopic pub /dual_car_signal std_msgs/String "data: 'ALLOW_START:2'" -1
+```
+
+**模拟任务占用排除**：
+
+```bash
+# 模拟车 1 占用 box=0
+rostopic pub /current_qr_task std_msgs/String "data: 'CAR1:AB-1'" -r 2
+
+# 车 2 日志应输出: [Main] 对车占用: box=0 (任务 AB-1)
+# 车 1 应忽略自身消息，不输出上述日志
+
+# 模拟车 1 清空占用
+rostopic pub /current_qr_task std_msgs/String "data: 'CAR1:'" -r 2
+```
+
+**验证排除逻辑**：
+
+```bash
+# 在车 2 收到假 /cam_return 前发布对车占用
+rostopic pub /current_qr_task std_msgs/String "data: 'CAR1:AB-1'" -r 2
+
+# 车 2 在 AT_BOARD1 状态时发送假识别（box=0 已被对车占用）
+rosrun pharmacy_mplus0_debug send_fake_cam_return.py _code:=C _box:=2
+
+# 验证：车 2 选择 box=2 (C) 而非 box=0 (AB)
+```
+
+### 5.8 干跑双车完整自动循环
+
+```bash
+# 终端 1：车 1 主控
+roslaunch pharmacy_mplus0_debug test_full_dryrun.launch \
+  car_id:=1 dual_car_enabled:=true
+
+# 终端 2：车 2 主控
+roslaunch pharmacy_mplus0_debug test_full_dryrun.launch \
+  car_id:=2 dual_car_enabled:=true
+
+# 终端 3：观察日志，依次在两车进入 AT_BOARD1 时发送假识别
+# 车 1 完成配送后会自动发送 ALLOW_START:2
+# 车 2 收到后自动出发，完成配送后自动发送 ALLOW_START:1
+# 循环持续
+```
+
 ---
 
 ## 6. 参数调试说明
@@ -219,6 +283,7 @@ rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
 | `box` | 1 | 模拟的方框号 0-3 |
 | `cv1` | 0 | 模拟的识别板二等待秒数 |
 | `car_id` | 1 | 小车编号 |
+| `dual_car_enabled` | false | 是否启用双车模式 |
 | `audio_dir` | "" | 干跑默认不播放音频（空字符串） |
 | `audio_player` | aplay | 音频播放器 |
 | `allow_overlap` | false | 是否允许重叠播放 |
@@ -243,7 +308,7 @@ rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
 | | `_cv1` | WAIT-0 | 识别板二结果 |
 | | `_cv2` | (空) | 识别板一结果（如 AB-1） |
 | | `_announce` | (空) | 音频事件 ID（如 board2_idle） |
-| `tcp_fake_server.py` | `_port` | 9999 | 监听端口 |
+| `tcp_fake_server.py` | `_port` | 8888 | 监听端口 |
 | `board2_template_capture.py` | `_name` | idle | 保存的模板名（idle / wait5~wait10） |
 
 ---
@@ -272,8 +337,8 @@ rosrun pharmacy_mplus0_debug send_fake_cv1.py _wait:=0
 
 ### 7.3 仪表盘订阅的话题
 
-`topic_echo_dashboard.py` 订阅以下 9 个话题：
-`/cam_return`, `/cv1_result`, `/cv2_result`, `/current_task`, `/current_qr_task`, `/announce_request`, `/board1_detections`, `/board2_status`, `/all_qrcodes`
+`topic_echo_dashboard.py` 订阅以下 10 个话题：
+`/cam_return`, `/cv1_result`, `/cv2_result`, `/current_task`, `/current_qr_task`, `/dual_car_signal`, `/announce_request`, `/board1_detections`, `/board2_status`, `/all_qrcodes`
 
 ---
 
@@ -342,7 +407,7 @@ roslaunch pharmacy_mplus0_debug test_navigation.launch target:=board1
 
 ### Q4：tcp_fake_server 启动报"Address already in use"
 
-原因：端口已被占用（默认 9999，也可能是其他服务或残留进程）。
+原因：端口已被占用（默认 8888，也可能是其他服务或残留进程）。
 
 解决：
 ```bash
@@ -361,6 +426,25 @@ rosrun pharmacy_mplus0 tcp_reporter.py _server_port:=9998
 ```bash
 rostopic list | grep -E "cam_return|cv1_result|board1"
 rostopic echo /current_task  # 确认主控当前状态
+```
+
+### Q6：双车调试时车 2 一直不出发
+
+可能原因：
+- `dual_car_enabled` 未设为 `true`。
+- `dual_car_start_first_car_id` 配置与预期不符（默认 "1" 首发）。
+- `/dual_car_signal` 未收到或格式错误（应为 `ALLOW_START:2` 不含多余空格）。
+
+排查：
+```bash
+# 确认话题数据
+rostopic echo /dual_car_signal
+
+# 手动放行测试
+rostopic pub /dual_car_signal std_msgs/String "data: 'ALLOW_START:2'" -1
+
+# 检查车 2 状态
+rostopic echo /current_task  # 如果始终是 R，说明在等待中
 ```
 
 ---
