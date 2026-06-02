@@ -35,6 +35,7 @@
   <arg name="audio_player"  default="aplay"  doc="音频播放器: aplay / paplay / ffplay"/>
   <arg name="allow_overlap" default="false"  doc="是否允许音频重叠播放"/>
   <arg name="dual_car_enabled" default="false" doc="是否启用双车循环协作"/>
+  <arg name="dual_car_remote_task_enabled" default="false" doc="是否启用远程任务共享（需 dual_car_enabled:=true）"/>
 
   <!-- ── 识别板一检测节点 ───────────────────────── -->
   <node name="board1_detector"
@@ -68,6 +69,7 @@
         output="screen" respawn="false" required="true">
     <param name="car_id"           value="$(arg car_id)"/>
     <param name="dual_car_enabled" value="$(arg dual_car_enabled)"/>
+    <param name="dual_car_remote_task_enabled" value="$(arg dual_car_remote_task_enabled)"/>
   </node>
 
 </launch>

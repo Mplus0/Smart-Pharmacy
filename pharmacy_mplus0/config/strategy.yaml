@@ -48,8 +48,7 @@ dual_car_signal_topic: "/dual_car_signal"
 # 完成配送后是否发布允许对车出发信号。
 dual_car_publish_allow_when_returning: true
 
-# 远程任务共享（后续优化预留，当前默认关闭）。
-# 启用后车 1 可将识别板一的第二个二维码分配给车 2，车 2 可跳过识别板一。
+# 远程任务共享：启用后车 1 可将识别板一剩余二维码分配给车 2，车 2 可跳过识别板一。
+# 注意：已移除时间戳过期限制，远程任务不再因 stamp 过旧而被丢弃。
+# 任务有效性仅由字段完整性和合法性判断。
 dual_car_remote_task_enabled: false
-# 远程任务最大有效时间（秒），超过则丢弃。
-dual_car_remote_task_max_age_sec: 45.0

@@ -131,14 +131,16 @@ class MainController(object):
                 self._dual_start_allowed = False
                 self._dual_waiting_at_start = True
 
-        # ---- 远程任务共享预留（默认关闭，不改主流程）-----------------
-        self._dual_remote_task_enabled = strategy.get(
-            "dual_car_remote_task_enabled", False
+        # ---- 远程任务共享（默认关闭，不影响单车和基础双车流程）-------
+        self._dual_remote_task_enabled = rospy.get_param(
+            "~dual_car_remote_task_enabled", None
         )
-        self._dual_remote_task_max_age_sec = strategy.get(
-            "dual_car_remote_task_max_age_sec", 45.0
-        )
+        if self._dual_remote_task_enabled is None:
+            self._dual_remote_task_enabled = strategy.get(
+                "dual_car_remote_task_enabled", False
+            )
         self._dual_assigned_remote_task = None
+        self._dual_remote_task_sent_this_round = False
 
         # 访问顺序和任务优先级传给 TaskPlanner。
         visit_order = strategy.get("visit_order", None)
@@ -317,10 +319,12 @@ class MainController(object):
         loginfo("[DualCar] received %s, this car can start next round", body)
 
     def _dual_try_parse_remote_task(self, body):
-        """安全解析 JSON 格式的双车信号（远程任务预留）。
+        """安全解析 JSON 格式的双车信号（远程任务共享）。
 
-        当前阶段：仅校验格式，提取 ALLOW_START 放行逻辑。
-        即使收到有效远程任务，也不跳过识别板一（默认行为）。
+        当收到合法 JSON 远程任务时：
+        - 缓存任务到 _dual_assigned_remote_task
+        - 同时执行放行逻辑（视为 ALLOW_START）
+        - 不再校验 stamp 是否过期
         """
         if not self._dual_car_enabled:
             return
@@ -342,13 +346,11 @@ class MainController(object):
         if from_car == self._car_id:
             return
 
-        if not self._dual_waiting_at_start:
-            loginfo(
-                "[DualCar] ignored JSON signal because car is not waiting at start"
-            )
+        if msg_type != "ALLOW_START_WITH_TASK":
+            logwarn("[DualCar] unknown JSON message type: %s", msg_type)
             return
 
-        # 提取远程任务（如果存在）。
+        # 提取远程任务。
         task = data.get("task")
         if (
             task
@@ -358,45 +360,53 @@ class MainController(object):
             code = task.get("code", "")
             box = task.get("box")
             lab_window = task.get("lab_window", "")
-            sample_count = task.get("sample_count", 0)
-            stamp = data.get("stamp", 0)
+            sample_count = task.get("sample_count")
 
-            # 检查是否过期。
-            now = time.time()
-            if stamp and (now - float(stamp)) > self._dual_remote_task_max_age_sec:
-                loginfo(
-                    "[DualCar] remote task expired (age=%.1fs > max=%.1fs), "
-                    "will go to board1",
-                    now - float(stamp),
-                    self._dual_remote_task_max_age_sec,
+            # 基本字段校验（不再校验 stamp 是否过期）。
+            code_ok = bool(code and str(code).strip())
+            box_ok = box is not None and isinstance(box, int)
+            lab_ok = bool(lab_window and str(lab_window).strip() in ("1", "2", "3", "4"))
+
+            if not (code_ok and box_ok and lab_ok):
+                logwarn(
+                    "[DualCar] remote task fields invalid (code=%s box=%s lab=%s), "
+                    "fallback to normal board1 flow",
+                    code, box, lab_window,
                 )
                 self._dual_assigned_remote_task = None
-            elif code and box is not None and lab_window:
+            else:
+                # 如果已经有远程任务且本轮已开始执行，不再覆盖。
+                if (self._dual_assigned_remote_task is not None
+                        and self._state not in (STATE_INIT, STATE_GOTO_BOARD1)):
+                    loginfo(
+                        "[DualCar] already executing a task, ignoring new remote task"
+                    )
+                    return
+
+                stamp = data.get("stamp", 0)
                 self._dual_assigned_remote_task = {
                     "from_car": from_car,
-                    "code": code,
+                    "code": str(code).strip(),
                     "box": int(box),
-                    "lab_window": str(lab_window),
-                    "sample_count": int(sample_count),
+                    "lab_window": str(lab_window).strip(),
+                    "sample_count": (int(sample_count)
+                                     if sample_count is not None
+                                     else len(str(code).strip())),
                     "stamp": stamp,
                 }
                 loginfo(
-                    "[DualCar] cached remote task from car %s: %s box=%d lab=%s",
+                    "[DualCar] received remote task from car %s: "
+                    "code=%s box=%d lab_window=%s sample_count=%s, skip board1",
                     from_car, code, int(box), lab_window,
-                )
-            else:
-                logwarn(
-                    "[DualCar] remote task fields incomplete, ignored"
+                    self._dual_assigned_remote_task["sample_count"],
                 )
         else:
-            # 无有效远程任务或功能未启用，仅当作普通放行信号。
+            # 远程任务功能未启用或无 task 字段，仅当作普通放行信号。
+            if self._dual_remote_task_enabled:
+                logwarn("[DualCar] JSON missing valid task, treated as plain ALLOW_START")
             self._dual_assigned_remote_task = None
 
         # 无论是否有远程任务，都执行放行逻辑。
-        # 当前阶段不跳过识别板一：后续启用时在此处判断
-        # if self._dual_remote_task_enabled and self._dual_assigned_remote_task:
-        #     # 可跳过识别板一，直接使用缓存任务
-        #     pass
         self._dual_start_allowed = True
         self._dual_waiting_at_start = False
         loginfo("[DualCar] received JSON ALLOW_START from car %s", from_car)
@@ -418,6 +428,123 @@ class MainController(object):
         self._dual_start_allowed = False
         self._dual_waiting_at_start = False
         loginfo("[DualCar] sent %s, peer can start while this car returns", msg)
+
+    def _dual_publish_remote_task_for_peer(self, task_detection):
+        """将剩余任务打包为 JSON 通过 /dual_car_signal 发送给对车。
+
+        参数:
+            task_detection: Board1Detection，要发送给对车的任务。
+        发送失败不影响本车继续执行自己的配送任务。
+        """
+        if not self._dual_car_enabled:
+            return
+        if not self._dual_remote_task_enabled:
+            return
+        peer_id = self._dual_peer_id()
+        payload = {
+            "type": "ALLOW_START_WITH_TASK",
+            "from_car": self._car_id,
+            "target_car": peer_id,
+            "stamp": time.time(),
+            "task": {
+                "code": task_detection.code,
+                "box": task_detection.box_index,
+                "lab_window": task_detection.lab_window,
+                "sample_count": task_detection.sample_count,
+            },
+        }
+        try:
+            body = json.dumps(payload, ensure_ascii=False)
+            self._io.publish_dual_signal(body)
+            loginfo(
+                "[DualCar] sent remote task to car %s: code=%s box=%d lab_window=%s",
+                peer_id,
+                task_detection.code,
+                task_detection.box_index,
+                task_detection.lab_window,
+            )
+        except (ValueError, TypeError) as exc:
+            logwarn("[DualCar] failed to serialize remote task: %s", exc)
+
+    def _dual_apply_remote_task_if_available(self):
+        """如果存在有效的远程任务，直接转换为当前任务并跳过识别板一。
+
+        职责:
+        1. 检查远程任务是否存在且功能已启用。
+        2. 将远程任务转换为 Board1Detection，构建 RoundPlan。
+        3. 发布 /current_task、/current_qr_task、/cv2_result。
+        4. 清空远程任务标记已消费。
+        5. 切换到 GOTO_EXAM 状态。
+
+        返回:
+            True  表示已接管流程，调用方应 return 跳过正常识别板一流程。
+            False 表示无远程任务或转换失败，继续正常流程。
+        """
+        if not self._dual_car_enabled:
+            return False
+        if not self._dual_remote_task_enabled:
+            return False
+        if self._dual_assigned_remote_task is None:
+            return False
+
+        remote = self._dual_assigned_remote_task
+        loginfo(
+            "[DualCar] using assigned remote task, skip board1: "
+            "code=%s lab_window=%s",
+            remote["code"], remote["lab_window"],
+        )
+
+        try:
+            # 将远程任务转换为 Board1Detection。
+            from pharmacy_mplus0.models import make_board1_detection
+            detection = make_board1_detection(remote["code"], remote["box"])
+        except (ValueError, KeyError) as exc:
+            logwarn(
+                "[DualCar] failed to convert remote task to detection: %s, "
+                "fallback to normal board1 flow",
+                exc,
+            )
+            self._dual_assigned_remote_task = None
+            return False
+
+        try:
+            # 构建本轮执行计划。
+            self._round_plan = self._planner.build_round_plan(detection)
+        except (ValueError, KeyError) as exc:
+            logwarn(
+                "[DualCar] failed to build round plan from remote task: %s, "
+                "fallback to normal board1 flow",
+                exc,
+            )
+            self._dual_assigned_remote_task = None
+            return False
+
+        self._exam_visit_idx = 0
+
+        loginfo(
+            "[Main] 本轮任务（远程）: 二维码=%s 方框=%d 化验窗口=%s "
+            "样本类型=%s 体检顺序=%s",
+            self._round_plan.code,
+            detection.box_index,
+            self._round_plan.lab_window,
+            self._round_plan.sample_type,
+            self._round_plan.exam_windows,
+        )
+
+        # 发布 CV2 和任务占用（与正常识别板一流程一致）。
+        self._io.publish_cv2(
+            self._round_plan.code, self._round_plan.lab_window
+        )
+        self._io.publish_qr_task(
+            self._round_plan.code, self._round_plan.lab_window
+        )
+
+        # 清空远程任务，标记已消费。
+        self._dual_assigned_remote_task = None
+
+        # 直接跳到体检区配送流程，跳过识别板一。
+        self._state = STATE_GOTO_EXAM
+        return True
 
     def _cb_peer_qr_task(self, msg):
         """解析对车广播的 /current_qr_task，提取被占用的 box_index。
@@ -518,8 +645,13 @@ class MainController(object):
             rospy.sleep(0.1)
             return
 
-        # 新一轮开始，重置本轮放行标记。
+        # 远程任务共享：如果已缓存远程任务，直接跳过识别板一。
+        if self._dual_apply_remote_task_if_available():
+            return
+
+        # 新一轮开始，重置本轮放行和远程任务发送标记。
         self._dual_allow_sent_this_round = False
+        self._dual_remote_task_sent_this_round = False
 
         loginfo("[Main] === GOTO_BOARD1 (即将进入第 %d 轮) ===",
                 self._round_index + 1)
@@ -634,6 +766,23 @@ class MainController(object):
         self._io.publish_qr_task(
             self._round_plan.code, self._round_plan.lab_window
         )
+
+        # ---- 远程任务共享：将剩余任务发送给对车 -------------------
+        if (self._dual_car_enabled
+                and self._dual_remote_task_enabled
+                and not self._dual_remote_task_sent_this_round
+                and self._car_id == "1"):
+            # 排除本车已选任务，从剩余检测中选出最适合对车的任务。
+            remaining = [
+                d for d in self._board1_detections
+                if d.box_index != best.box_index
+            ]
+            if remaining:
+                peer_task = self._planner.select_best(remaining)
+                if peer_task is not None:
+                    self._dual_publish_remote_task_for_peer(peer_task)
+                    self._dual_remote_task_sent_this_round = True
+        # -----------------------------------------------------------
 
         self._state = STATE_GOTO_EXAM
 
@@ -778,6 +927,9 @@ class MainController(object):
         """本轮结束。根据策略回起点或不回起点，然后进入下一轮。"""
         loginfo("[Main] === DONE_ROUND === 本轮结束")
         self._io.publish_qr_task("", "")
+
+        # 清理远程任务缓存，避免下一轮误用。
+        self._dual_assigned_remote_task = None
 
         # 双车协作：完成配送并准备返回起点时，放行对车。
         self._dual_publish_allow_peer_start()
