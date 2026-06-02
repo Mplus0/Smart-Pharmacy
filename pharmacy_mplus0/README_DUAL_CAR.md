@@ -153,13 +153,13 @@ dual_car_publish_allow_when_returning: true  # 完成后是否放行对车
 ### 5.1 双车模式
 
 ```bash
-# 车 1（主车，先出发，完整功能）
+# 车 1（主车，先出发）
 roslaunch pharmacy_mplus0 race_bringup.launch \
   car_id:=1 dual_car_enabled:=true
 
-# 车 2（跟车，初始等待，静默模式避免双车同时播报）
+# 车 2（初始等待，收到放行信号后出发，各自播报）
 roslaunch pharmacy_mplus0 race_bringup.launch \
-  car_id:=2 dual_car_enabled:=true audio_dir:=""
+  car_id:=2 dual_car_enabled:=true
 ```
 
 ### 5.2 单车模式（默认，不受影响）
@@ -305,7 +305,7 @@ print('排除box2:', best.code, 'box', best.box_index)  # AB box 0
 | 收到发给对车的 ALLOW_START | 回调中 `target_id != self._car_id`，直接忽略 |
 | 配送途中收到 ALLOW_START | `_dual_waiting_at_start` 为 False，回调忽略 |
 | 收到旧格式 `/current_qr_task`（无 CAR 前缀） | 双车模式下忽略（无法区分来源），单车模式下正常处理 |
-| 语音播报冲突 | 跟车用 `audio_dir:=""` 禁用语音，主车正常播报 |
+| 语音播报冲突 | 两车轮流出发，配送时段不重叠，各自播报即可；如需禁用语音仍可通过 `audio_dir:=""` 关闭 |
 | `round_return_to_start: false` | 双车模式依赖回起点来保证节奏，建议保持 `true` |
 
 ---
@@ -319,7 +319,7 @@ pharmacy_mplus0/
 │   └── strategy.yaml               ← dual_car_enabled 等配置
 ├── launch/
 │   ├── main.launch                 ← car_id / dual_car_enabled 参数
-│   ├── main_single.launch          ← 双车跟车入口（静默模式）
+│   ├── main_single.launch          ← 可选静默入口（调试用）
 │   └── race_bringup.launch         ← 全量启动，暴露 dual_car_enabled
 ├── scripts/
 │   ├── main_controller.py          ← ★ 双车核心调度逻辑

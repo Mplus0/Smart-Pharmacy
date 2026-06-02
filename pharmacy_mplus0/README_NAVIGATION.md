@@ -113,7 +113,7 @@ race_bringup.launch
 | `race_bringup.launch` | [launch/race_bringup.launch](launch/race_bringup.launch) | `start_base`(true), `start_navigation`(true), `start_camera`(true), `start_video_server`(true), `start_pharmacy`(true), `planner`(teb), `server_ip`(192.168.124.2), `server_port`(8888), `car_id`(1), `audio_dir`(包内audio) |
 | `base_camera_nav.launch` | [launch/base_camera_nav.launch](launch/base_camera_nav.launch) | `start_navigation`(true), `start_camera`(true), `start_video_server`(true), `use_race_init`(false) |
 | `main.launch` | [launch/main.launch](launch/main.launch) | `stream_url`, `server_ip`(192.168.124.2), `server_port`(8888), `car_id`(1), `audio_dir`(包内audio) |
-| `main_single.launch` | [launch/main_single.launch](launch/main_single.launch) | 同 main.launch，`audio_dir` 默认为空（静默模式） |
+| `main_single.launch` | [launch/main_single.launch](launch/main_single.launch) | 同 main.launch，`audio_dir` 默认为空（调试入口，禁用语音） |
 | `reporter.launch` | [launch/reporter.launch](launch/reporter.launch) | `server_ip`(192.168.124.2), `server_port`(8888), `car_id`(1) |
 | `detectors.launch` | [launch/detectors.launch](launch/detectors.launch) | `stream_url` |
 

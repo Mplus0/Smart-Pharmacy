@@ -39,7 +39,7 @@ pharmacy_mplus0/
 │   ├── race_bringup.launch       # 【正式比赛入口】一键全量启动
 │   ├── base_camera_nav.launch    # 仅启动底盘+导航+摄像头+视频流
 │   ├── main.launch               # 业务层启动（4 个比赛节点）
-│   ├── main_single.launch        # 静默语音模式
+│   ├── main_single.launch        # 静默语音模式（可选的调试入口）
 │   ├── detectors.launch          # 仅两个识别节点
 │   └── reporter.launch           # 仅 TCP 上报节点
 ├── scripts/                      # ROS 节点入口（可执行脚本）
@@ -77,7 +77,7 @@ pharmacy_mplus0/
 | `launch/race_bringup.launch` | 正式比赛一键全量启动：底盘→导航→摄像头→视频流→4个业务节点 | 通过 `start_*` 参数可跳过已启动的子系统 |
 | `launch/base_camera_nav.launch` | 仅启动基础系统（底盘/导航/摄像头/视频流），不启动业务 | 赛前验证定位、导航、视频流 |
 | `launch/main.launch` | 启动 4 个比赛业务节点：board1_detector + board2_detector + tcp_reporter + main_controller | 不启动底盘/导航/摄像头 |
-| `launch/main_single.launch` | 同 `main.launch`，但 `audio_dir=""` 禁用语音 | 单车调试或双车跟车 |
+| `launch/main_single.launch` | 同 `main.launch`，但 `audio_dir=""` 禁用语音 | 单车调试或需禁用语音的场景 |
 | `launch/detectors.launch` | 仅启动 board1_detector + board2_detector | 安全，小车不会运动 |
 | `launch/reporter.launch` | 仅启动 tcp_reporter | 单独调试 TCP 和播报 |
 
@@ -226,23 +226,23 @@ roslaunch pharmacy_mplus0 race_bringup.launch \
 # 使用 DWA 规划器（默认 teb）
 roslaunch pharmacy_mplus0 base_camera_nav.launch planner:=dwa
 
-# 2 号车静默模式（或双车跟车）
-roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2 audio_dir:=""
+# 2 号车单车模式（正常播报）
+roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2
 
-# 2 号车双车模式（等待车 1 放行）
-roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2 dual_car_enabled:=true audio_dir:=""
+# 2 号车双车模式（轮流出发，正常播报）
+roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2 dual_car_enabled:=true
 ```
 
 ### 5.4 双车协作启动
 
 ```bash
-# 车 1（主车，先出发，完整功能）
+# 车 1（主车，先出发）
 roslaunch pharmacy_mplus0 race_bringup.launch \
   car_id:=1 dual_car_enabled:=true
 
-# 车 2（跟车，初始等待，静默模式）
+# 车 2（初始等待，收到放行信号后出发）
 roslaunch pharmacy_mplus0 race_bringup.launch \
-  car_id:=2 dual_car_enabled:=true audio_dir:=""
+  car_id:=2 dual_car_enabled:=true
 
 # 覆盖首发车
 roslaunch pharmacy_mplus0 race_bringup.launch \
