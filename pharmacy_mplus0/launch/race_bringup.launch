@@ -44,10 +44,13 @@
   <arg name="allow_overlap" default="false" doc="是否允许重叠播放"/>
   <arg name="dual_car_enabled" default="false" doc="是否启用双车循环协作"/>
   <arg name="dual_car_remote_task_enabled" default="false" doc="是否启用远程任务共享"/>
+  <arg name="dual_car_peer_ip" default="" doc="对车 IP 地址"/>
+  <arg name="dual_car_listen_ip" default="0.0.0.0" doc="本车 TCP 监听地址"/>
+  <arg name="dual_car_listen_port" default="9001" doc="本车 TCP 监听端口"/>
+  <arg name="dual_car_peer_port" default="9001" doc="对车 TCP 端口"/>
 
   <!-- ── 一、基础系统 ───────────────────────────── -->
   <include file="$(find pharmacy_mplus0)/launch/base_camera_nav.launch">
-    <arg name="start_base"         value="$(arg start_base)"/>
     <arg name="start_navigation"   value="$(arg start_navigation)"/>
     <arg name="start_camera"       value="$(arg start_camera)"/>
     <arg name="start_video_server" value="$(arg start_video_server)"/>
@@ -66,6 +69,10 @@
       <arg name="allow_overlap" value="$(arg allow_overlap)"/>
       <arg name="dual_car_enabled" value="$(arg dual_car_enabled)"/>
       <arg name="dual_car_remote_task_enabled" value="$(arg dual_car_remote_task_enabled)"/>
+      <arg name="dual_car_peer_ip" value="$(arg dual_car_peer_ip)"/>
+      <arg name="dual_car_listen_ip" value="$(arg dual_car_listen_ip)"/>
+      <arg name="dual_car_listen_port" value="$(arg dual_car_listen_port)"/>
+      <arg name="dual_car_peer_port" value="$(arg dual_car_peer_port)"/>
     </include>
   </group>
 

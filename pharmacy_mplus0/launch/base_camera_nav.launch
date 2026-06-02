@@ -24,17 +24,18 @@
   <arg name="start_camera"       default="true" doc="启动摄像头"/>
   <arg name="start_video_server" default="true" doc="启动 web_video_server"/>
   <arg name="use_race_init"      default="false" doc="使用 robot_race_init.launch 替代 robot_navigation.launch"/>
+  <arg name="planner"            default="teb" doc="路径规划器: dwa / teb"/>
 
   <!-- ── 导航（底盘 + 激光雷达 + 定位 + move_base + EKF）─ -->
   <group if="$(arg start_navigation)">
     <include unless="$(arg use_race_init)"
              file="$(find robot_navigation)/launch/robot_navigation.launch">
-      <arg name="planner" value="teb"/>
+      <arg name="planner" value="$(arg planner)"/>
       <arg name="open_rviz" value="false"/>
     </include>
     <include if="$(arg use_race_init)"
              file="$(find robot_navigation)/launch/robot_race_init.launch">
-      <arg name="planner" value="teb"/>
+      <arg name="planner" value="$(arg planner)"/>
       <arg name="open_rviz" value="false"/>
     </include>
   </group>

@@ -28,21 +28,15 @@ sudo vim /etc/hosts
 
 ### 1.2 配置 ROS Master — `~/.bashrc`
 
-双车模式下两车需连接同一个 ROS Master。镜像烧录后两车的 `~/.bashrc` 中 ROS Master 均为 `http://127.0.0.1:11311`（各自本地），需要指定一台车作为 Master。
-
-**方案：车一作为 ROS Master，车二指向车一。**
-
-在车二的 `~/.bashrc` 末尾追加：
+两车使用独立 ROS Master，各自指向本地即可：
 
 ```bash
-export ROS_MASTER_URI=http://192.168.124.3:11311
+export ROS_MASTER_URI=http://127.0.0.1:11311
 ```
 
-如果 `~/.bashrc` 中存在写死 IP 的 `ROS_IP` 或 `ROS_HOSTNAME`（如 `export ROS_IP=192.168.124.3`），车二上需要删除或改为：
+镜像烧录后两车的 `~/.bashrc` 中 ROS Master 通常已配置为本地，保持不变即可。**不要让两车使用同一个 ROS_MASTER_URI。**
 
-```bash
-export ROS_HOSTNAME=$(hostname)
-```
+如果 `~/.bashrc` 中存在写死 IP 的 `ROS_IP` 或 `ROS_HOSTNAME`，确保对应本车实际 IP。
 
 ### 1.3 建议检查项
 
@@ -148,22 +142,31 @@ roslaunch pharmacy_mplus0 race_bringup.launch \
   stream_url:=http://192.168.124.9:8080/stream?topic=/camera/rgb/image_raw
 ```
 
-### 双车模式（轮流出发，各自播报）
+### 双车 TCP 模式
 
 ```bash
+export ROS_MASTER_URI=http://127.0.0.1:11311  # 指向本机
+export ROS_IP=192.168.124.9
+unset ROS_HOSTNAME
+
 roslaunch pharmacy_mplus0 race_bringup.launch \
   car_id:=2 \
   dual_car_enabled:=true \
+  dual_car_peer_ip:=192.168.124.3 \
   stream_url:=http://192.168.124.9:8080/stream?topic=/camera/rgb/image_raw
 ```
 
 ### 让车二首发（覆盖默认首发车）
 
+在车 1 上执行，让车 2 获得首发权：
+
 ```bash
 roslaunch pharmacy_mplus0 race_bringup.launch \
   car_id:=1 \
   dual_car_enabled:=true \
-  dual_car_start_first_car_id:=2
+  dual_car_start_first_car_id:=2 \
+  dual_car_peer_ip:=192.168.124.9 \
+  stream_url:=http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw
 ```
 
 ---
@@ -173,10 +176,10 @@ roslaunch pharmacy_mplus0 race_bringup.launch \
 | 优先级 | 修改项 | 所在位置 | 类型 |
 |--------|--------|------|------|
 | P0 | 主机名 | `/etc/hostname` + `/etc/hosts` | 系统层 — 镜像烧录后必须改 |
-| P0 | ROS Master 指向 | `~/.bashrc` | 系统层 — 双车模式必须改 |
 | P0 | 航点坐标 | `config/waypoints.yaml` | 代码层 — 需重新标定 |
 | P0 | 摄像头 stream_url | 6 个文件（可命令行覆盖） | 代码层 |
 | P1 | car_id | 6 个文件（可命令行覆盖） | 代码层 |
+| P1 | 双车 TCP peer_ip | launch 参数 `dual_car_peer_ip:=192.168.124.3` | 命令行 |
 | P2 | 裁判 IP | 6 个文件（可命令行覆盖） | 代码层 |
 | P3 | 语音播报 | 无需额外修改 | — |
 

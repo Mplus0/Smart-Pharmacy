@@ -1,6 +1,6 @@
 # 通信系统说明
 
-本文档描述 `pharmacy_mplus0` 的两套通信系统：小车→裁判系统的 TCP 上报，以及两车之间的 ROS 话题通信。
+本文档描述 `pharmacy_mplus0` 的两套通信系统：小车→裁判系统的 TCP 上报，以及两车之间的 TCP 通信。
 
 ---
 
@@ -18,10 +18,10 @@
     ┌──────┴──────────┐                 ┌──────┴──────────┐
     │    车 1          │                 │    车 2          │
     │  IP: 192.168.124.3│                │  IP: 192.168.124.9│
-    │  tcp_reporter    │   ROS 话题       │  tcp_reporter    │
-    │  main_controller │◄═══════════════►│  main_controller │
-    │                  │ /dual_car_signal │                  │
-    │                  │ /current_qr_task │                  │
+    │  ROS Master 独立  │  TCP :9001      │  ROS Master 独立  │
+    │  tcp_reporter    │◄═══════════════►│  tcp_reporter    │
+    │  main_controller │ dual_car TCP     │  main_controller │
+    │                  │ (JSON line)      │                  │
     └──────────────────┘                 └──────────────────┘
 ```
 
@@ -34,7 +34,7 @@
 | 车二 | `192.168.124.9` | 摄像头视频流 + ROS 节点 |
 
 - **小车 → 裁判**：TCP 长连接，每车独立上报。上报失败不阻塞比赛流程。
-- **车 1 ↔ 车 2**：ROS 话题，在同一个 ROS Master 下通过话题通信实现轮流出发和任务占用排除。
+- **车 1 ↔ 车 2**：TCP 通信，两车使用独立 ROS Master，通过 TCP :9001 传递 JSON 消息。
 
 ---
 
@@ -147,93 +147,67 @@ Launch 参数（在 `main.launch` / `race_bringup.launch` / `reporter.launch` �
 
 ---
 
-## 3. 车 1 ↔ 车 2（ROS 话题通信）
+## 3. 车 1 ↔ 车 2（TCP 通信，默认）
 
 ### 3.1 架构
 
-两车通过 ROS 话题通信，不使用 TCP：
+两车通过 TCP :9001 直接通信，各自使用独立 ROS Master。
 
 ```text
 车 1  main_controller                  车 2  main_controller
   │                                        │
-  ├── 发布 /current_qr_task ──────────────►├── 订阅（解析对车占用的方框）
-  ├── 订阅 /current_qr_task ◄──────────────├── 发布（广播自己的占用）
+  │  DualCarTcpBridge                      │  DualCarTcpBridge
+  │    ├── TCP Server :9001 (接收)          │    ├── TCP Server :9001 (接收)
+  │    └── TCP Client → 车2:9001 (发送)     │    └── TCP Client → 车1:9001 (发送)
   │                                        │
-  ├── 发布 /dual_car_signal ──────────────►├── 订阅（收到 ALLOW_START:2 后出发）
-  ├── 订阅 /dual_car_signal ◄──────────────├── 发布（完成配送后放行对车）
+  │  TCP 消息:                              │   TCP 消息:
+  │    allow_start / remote_task            │    allow_start / remote_task
+  │    qr_task / qr_task_clear              │    qr_task / qr_task_clear
 ```
 
 关键代码文件：
 
 | 文件 | 作用 |
 |---|---|
-| [scripts/main_controller.py](scripts/main_controller.py) | 双车核心调度：订阅/发布双车话题，控制出发和等待 |
-| [src/pharmacy_mplus0/competition_io.py](src/pharmacy_mplus0/competition_io.py) | 提供 `publish_dual_signal()` 和 `publish_qr_task()` 接口 |
+| [scripts/main_controller.py](scripts/main_controller.py) | 双车核心调度：TCP 或 ROS 话题，控制出发和等待 |
+| [src/pharmacy_mplus0/dual_car_tcp.py](src/pharmacy_mplus0/dual_car_tcp.py) | **新增**：双车 TCP 通信模块（`DualCarTcpBridge`） |
+| [src/pharmacy_mplus0/competition_io.py](src/pharmacy_mplus0/competition_io.py) | 提供 `publish_dual_signal()` 和 `publish_qr_task()` 接口（ROS topic 模式） |
 | [src/pharmacy_mplus0/task_planner.py](src/pharmacy_mplus0/task_planner.py) | `select_best(excluded_box=...)` 排除对车占用的方框 |
-| [config/strategy.yaml](config/strategy.yaml) | 双车开关和首发车配置 |
+| [config/strategy.yaml](config/strategy.yaml) | 双车开关、通信模式和首发车配置 |
 
-### 3.2 双车话题
+### 3.2 通信协议
 
-| 话题 | 类型 | 格式 | 作用 |
-|---|---|---|---|
-| `/dual_car_signal` | `std_msgs/String` | `ALLOW_START:1` 或 `ALLOW_START:2` | 轮流出发控制信号 |
-| `/current_qr_task` | `std_msgs/String` | `CAR1:AB-1`（占用）<br>`CAR1:`（清空） | 任务占用广播，排除对车已选的二维码方框 |
+每辆车同时运行 TCP Server（监听 :9001）和 TCP Client（连接对车 :9001）。
+协议为 JSON + 换行符 `\n` 分隔。
 
-### 3.3 `/dual_car_signal` — 轮流出发信号
+| 消息类型 | JSON 格式 | 作用 |
+|---|---|---|
+| `allow_start` | `{"type":"allow_start","from_car":"1","target_car":"2","stamp":...}` | 放行对车出发 |
+| `remote_task` | `{"type":"remote_task","from_car":"1","target_car":"2","stamp":...,"task":{...}}` | 远程任务共享 |
+| `qr_task` | `{"type":"qr_task","from_car":"1","code":"AB","lab_window":"1","box":0,"stamp":...}` | 任务占用广播 |
+| `qr_task_clear` | `{"type":"qr_task_clear","from_car":"1","stamp":...}` | 清空任务占用 |
+| `ack` | `{"type":"ack","from_car":"2","target_car":"1","ack_type":"...","status":"...","stamp":...}` | ACK（仅用于日志） |
 
-**发布时机**：主控在 `DONE_ROUND` 状态开头，本轮配送完成后立即发送（不等本车回到起点）。
-
-**接收处理**：
-
-- 仅处理发给自己的信号（`target_id == self._car_id`）
-- 仅在起点等待状态时（`_dual_waiting_at_start == True`）响应
-- 配送途中收到的信号会被忽略
-- 格式校验：非 `ALLOW_START:<id>` 格式的信号被忽略
-
-**信号流**：
-
-```text
-车 1 完成配送 → 发布 ALLOW_START:2
-  → 车 2 收到，_dual_start_allowed = True，开始出发
-  → 车 2 完成配送 → 发布 ALLOW_START:1
-    → 车 1 收到，_dual_start_allowed = True，开始出发
-      → 循环
-```
-
-### 3.4 `/current_qr_task` — 任务占用广播
-
-**发布时机**：
-
-- 车选定识别板一二维码后，发布 `CAR<id>:<code>-<lab_window>`（如 `CAR1:AB-1`）
-- 本轮配送完成后，发布 `CAR<id>:`（清空）
-
-**接收处理**：
-
-- 解析对车的消息，提取 `box_index` 作为 `_peer_occupied_box`
-- 忽略自己的消息（`sender_id == self._car_id`）
-- 忽略格式不匹配的消息（双车模式下无 `CAR` 前缀的消息被丢弃）
-- 对车发布空占用时，`_peer_occupied_box` 清为 `None`
-
-**在任务选择时的作用**（[task_planner.py](src/pharmacy_mplus0/task_planner.py)）：
-
-```python
-best = planner.select_best(detections, excluded_box=peer_occupied_box)
-```
-
-排除被对车占用的方框后，在剩余方框中按样本数最大化原则选择。
-
-### 3.5 相关配置参数
+### 3.3 相关配置参数
 
 [strategy.yaml](config/strategy.yaml)：
 
 ```yaml
-dual_car_enabled: false              # 双车协作开关，默认关闭
-dual_car_start_first_car_id: "1"     # 开局允许先出发的车号
-dual_car_signal_topic: "/dual_car_signal"  # 信号话题名
+# 双车协作开关，默认关闭
+dual_car_enabled: false
+# 开局允许先出发的车号
+dual_car_start_first_car_id: "1"
+# 远程任务共享（默认关闭）
+dual_car_remote_task_enabled: false
 
-# 远程任务共享（预留，默认关闭）
-dual_car_remote_task_enabled: false  # 车1将第二个二维码分配给车2
-dual_car_remote_task_max_age_sec: 45.0
+# 双车通信固定使用 TCP（独立 ROS Master），不再支持 ros_topic 跨车通信。
+# TCP 通信参数
+dual_car_peer_ip: ""            # 对车 IP，车1填192.168.124.9，车2填192.168.124.3
+dual_car_listen_ip: "0.0.0.0"
+dual_car_listen_port: 9001
+dual_car_peer_port: 9001
+dual_car_tcp_connect_timeout_sec: 1.0
+dual_car_tcp_reconnect_sec: 2.0
 ```
 
 Launch 参数（在 `main.launch` / `race_bringup.launch` 中）：
@@ -262,8 +236,12 @@ Launch 参数（在 `main.launch` / `race_bringup.launch` 中）：
 | 修改目标 | 修改方式 | 涉及文件 |
 |---|---|---|
 | 启用双车 | launch 参数 `dual_car_enabled:=true` | [race_bringup.launch](launch/race_bringup.launch) |
+| 双车 TCP 通信 | launch 参数 `dual_car_peer_ip:=192.168.124.x` | [race_bringup.launch](launch/race_bringup.launch) |
+| 对车 IP | launch 参数 `dual_car_peer_ip:=192.168.124.x` | [race_bringup.launch](launch/race_bringup.launch) |
+| TCP 端口 | launch 参数 `dual_car_listen_port:=9001` / `dual_car_peer_port:=9001` | [race_bringup.launch](launch/race_bringup.launch) |
 | 首发车号 | 修改 `strategy.yaml` 中 `dual_car_start_first_car_id` 或 launch 覆盖 | [strategy.yaml](config/strategy.yaml) |
-| 信号话题名 | 修改 `strategy.yaml` 中 `dual_car_signal_topic` | [strategy.yaml](config/strategy.yaml) |
+| 远程任务共享 | launch 参数 `dual_car_remote_task_enabled:=true` | [race_bringup.launch](launch/race_bringup.launch) |
+| 信号话题名（ROS topic 模式） | 修改 `strategy.yaml` 中 `dual_car_signal_topic` | [strategy.yaml](config/strategy.yaml) |
 
 ---
 
@@ -288,36 +266,35 @@ rosrun pharmacy_mplus0 tcp_reporter.py _server_ip:=127.0.0.1 _audio_dir:=""
 #2    | car=1  speed=0.150  odom=(0.500,0.200)  task=R  CV1=WAIT-0  CV2=
 ```
 
-### 5.2 查看双车信号
+### 5.2 查看双车通信
 
 ```bash
-# 实时查看放行信号
-rostopic echo /dual_car_signal
+# 检查 TCP 端口监听状态
+ss -tlnp | grep 9001
 
-# 实时查看任务占用
-rostopic echo /current_qr_task
-```
+# 查看主控日志中的双车通信信息
+# 日志前缀: [DualCar] / [DualCarTcp]
 
-### 5.3 手动模拟双车信号
+# 用 nc 监听本车端口，查看收到的 TCP 消息
+nc -l 9001
 
-```bash
-# 手动放行车 2
-rostopic pub /dual_car_signal std_msgs/String "data: 'ALLOW_START:2'" -1
+# 用 nc 手动向对车发送放行信号
+echo '{"type":"allow_start","from_car":"1","target_car":"2","stamp":1}' | nc 192.168.124.9 9001
 
-# 模拟车 1 占用 box=0
-rostopic pub /current_qr_task std_msgs/String "data: 'CAR1:AB-1'" -r 2
+# 模拟任务占用
+echo '{"type":"qr_task","from_car":"2","code":"AB","lab_window":"1","box":0,"stamp":1}' | nc 192.168.124.9 9001
 
 # 清空占用
-rostopic pub /current_qr_task std_msgs/String "data: 'CAR1:'" -r 2
+echo '{"type":"qr_task_clear","from_car":"2","stamp":1}' | nc 192.168.124.9 9001
 ```
 
-### 5.4 终端仪表盘监控
+### 5.3 终端仪表盘监控
 
 ```bash
 rosrun pharmacy_mplus0_debug topic_echo_dashboard.py
 ```
 
-仪表盘同时显示 `/current_qr_task`、`/dual_car_signal`、`/current_task`、`/cv1_result`、`/cv2_result` 等关键话题。
+仪表盘同时显示 `/current_task`、`/cv1_result`、`/cv2_result` 等本车话题。双车通信已通过 TCP 传输，不再通过 ROS 话题显示。
 
 ---
 
@@ -325,8 +302,10 @@ rosrun pharmacy_mplus0_debug topic_echo_dashboard.py
 
 - **TCP 上报的 `odom` 字段实际是 map 系坐标**，通过 TF `map → base_footprint` 查询。命名与 ROS `/odom` 话题无关，是裁判系统约定的字段名。
 - **TCP 连接失败不影响比赛**，主控状态机不依赖 TCP 上报。
-- **双车协作默认关闭**，单车模式不受任何影响。不传 `dual_car_enabled:=true` 时，`/dual_car_signal` 和 `/current_qr_task` 话题仍会被发布但无对车订阅。
-- **`/current_qr_task` 是任务占用广播，不是出发控制信号**。出发控制由 `/dual_car_signal` 负责。
-- **双车模式下两车必须连到同一个 ROS Master**，否则话题无法互通。
+- **双车协作默认关闭**，单车模式不受任何影响。不传 `dual_car_enabled:=true` 时，双车 TCP 模块不会启动。
+- **双车 TCP 通信**：两车使用独立 ROS Master，通过 TCP :9001 通信。**不会出现节点名冲突**（`/move_base`、`/amcl` 等各车独立）。不要使用同一个 ROS_MASTER_URI。
+- **双车 TCP 端口与裁判 TCP 端口不同**：双车 TCP 默认 :9001，裁判上报 TCP :8888，互不干扰。
+- **任务占用广播和出发控制均通过 TCP 消息完成**。`qr_task`/`qr_task_clear` 负责任务占用，`allow_start` 负责出发控制。
 - 语音播报与 TCP 上报在同一个节点（`tcp_reporter`）中，禁用语音（`audio_dir:=""`）不会影响 TCP 上报。
 - 远程任务共享（车 1 将第二个二维码分配给车 2）**默认关闭**，当前车 2 收到放行信号后正常前往识别板一自行识别。
+- **双车 TCP 连接失败不阻塞启动**：对车未启动时本车 TCP 客户端持续重连，不影响主控流程。

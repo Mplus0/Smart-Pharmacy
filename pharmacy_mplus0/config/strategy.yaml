@@ -43,8 +43,6 @@ rounds:
 dual_car_enabled: false
 # 比赛开始时默认允许先出发的车号。
 dual_car_start_first_car_id: "1"
-# 双车信号话题名。
-dual_car_signal_topic: "/dual_car_signal"
 # 完成配送后是否发布允许对车出发信号。
 dual_car_publish_allow_when_returning: true
 
@@ -52,3 +50,22 @@ dual_car_publish_allow_when_returning: true
 # 注意：已移除时间戳过期限制，远程任务不再因 stamp 过旧而被丢弃。
 # 任务有效性仅由字段完整性和合法性判断。
 dual_car_remote_task_enabled: false
+
+# 双车通信固定使用 TCP（独立 ROS Master），不再支持 ros_topic 跨车通信。
+# 双车 TCP 通信总开关，配合 dual_car_enabled 使用。
+dual_car_tcp_enabled: true
+# 对车 IP 地址。此值必须通过命令行传入，无法在此设置通用默认值！
+#   车 1 启动时: dual_car_peer_ip:=<车2的IP>
+#   车 2 启动时: dual_car_peer_ip:=<车1的IP>
+# 留空将导致 TCP bridge 不启动，双车无法通信！
+dual_car_peer_ip: ""
+# 本车 TCP 监听地址，0.0.0.0 表示监听所有网卡。
+dual_car_listen_ip: "0.0.0.0"
+# 本车监听端口。
+dual_car_listen_port: 9001
+# 对车监听端口。
+dual_car_peer_port: 9001
+# TCP 连接超时（秒）。
+dual_car_tcp_connect_timeout_sec: 1.0
+# TCP 断线重连间隔（秒）。
+dual_car_tcp_reconnect_sec: 2.0
