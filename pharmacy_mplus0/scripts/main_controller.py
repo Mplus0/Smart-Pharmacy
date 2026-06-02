@@ -130,22 +130,6 @@ class MainController(object):
             strategy.get("dual_car_enabled", False),
         )
         self._car_id = str(rospy.get_param("~car_id", "1"))
-        start_first_id = str(
-            strategy.get("dual_car_start_first_car_id", "1")
-        )
-
-        self._dual_waiting_at_start = False
-        self._dual_start_allowed = True
-        self._dual_allow_sent_this_round = False
-
-        if self._dual_car_enabled:
-            if self._car_id == start_first_id:
-                self._dual_start_allowed = True
-                self._dual_waiting_at_start = False
-            else:
-                self._dual_start_allowed = False
-                self._dual_waiting_at_start = True
-
         # ---- 远程任务共享（默认关闭，不影响单车和基础双车流程）-------
         self._dual_remote_task_enabled = rospy.get_param(
             "~dual_car_remote_task_enabled", None
@@ -255,9 +239,6 @@ class MainController(object):
         self._round_plan = None
         self._exam_visit_idx = 0
 
-        # 双车协作：对车占用的方框索引，None 表示无占用。
-        self._peer_occupied_box = None
-
         self._print_banner()
         loginfo("[Main] 主控初始化完成")
 
@@ -319,36 +300,12 @@ class MainController(object):
         """返回对车编号：1→2, 2→1。"""
         return "2" if self._car_id == "1" else "1"
 
-    def _dual_handle_allow_start_signal(self, target_id, from_car=None):
-        """处理 ALLOW_START 放行信号（由 TCP 回调触发）。"""
-        if target_id != self._car_id:
-            loginfo(
-                "[DualCar] ALLOW_START for car %s ignored (本车是 car %s)",
-                target_id, self._car_id,
-            )
-            return
-        if not self._dual_car_enabled:
-            return
-        if not self._dual_waiting_at_start:
-            loginfo(
-                "[DualCar] ALLOW_START ignored — 本车未在等待状态"
-            )
-            return
-        self._dual_start_allowed = True
-        self._dual_waiting_at_start = False
-        src_info = " from car %s" % from_car if from_car else ""
-        loginfo(
-            "[DualCar] ALLOW_START accepted for car %s%s, "
-            "将从等待状态切换到 GOTO_BOARD1",
-            target_id, src_info,
-        )
-
     def _dual_handle_remote_task_data(self, data):
         """处理远程任务数据（由 TCP 回调触发）。
 
-        当收到合法远程任务时：
-        - 缓存任务到 _dual_assigned_remote_task
-        - 同时执行放行逻辑
+        当收到合法远程任务时，缓存到 _dual_assigned_remote_task
+        供 _dual_apply_remote_task_if_available 消费。
+        非法或不完整任务将被忽略并清空缓存。
         """
         if not self._dual_car_enabled:
             return
@@ -419,15 +376,8 @@ class MainController(object):
                     self._dual_assigned_remote_task["sample_count"],
                 )
         else:
-            # 远程任务功能未启用或无 task 字段，仅当作普通放行信号。
-            if self._dual_remote_task_enabled:
-                logwarn("[DualCar] JSON missing valid task, treated as plain ALLOW_START")
+            logwarn("[DualCar] JSON missing valid task, ignored")
             self._dual_assigned_remote_task = None
-
-        # 无论是否有远程任务，都执行放行逻辑。
-        self._dual_start_allowed = True
-        self._dual_waiting_at_start = False
-        loginfo("[DualCar] received ALLOW_START from car %s via %s", from_car, msg_type)
 
     def _dual_handle_tcp_message(self, payload):
         """TCP 消息分发：将收到的 JSON 路由到对应处理函数。"""
@@ -437,10 +387,7 @@ class MainController(object):
             "[DualCar] TCP recv: type=%s from_car=%s",
             msg_type, from_car,
         )
-        if msg_type == "allow_start":
-            target_car = str(payload.get("target_car", ""))
-            self._dual_handle_allow_start_signal(target_car, from_car)
-        elif msg_type == "remote_task":
+        if msg_type == "remote_task":
             self._dual_handle_remote_task_data(payload)
         elif msg_type == "ack":
             loginfo(
@@ -449,78 +396,8 @@ class MainController(object):
                 payload.get("status", ""),
                 payload.get("from_car", ""),
             )
-        elif msg_type == "qr_task":
-            self._dual_handle_peer_qr_task_payload(payload)
-        elif msg_type == "qr_task_clear":
-            self._dual_handle_peer_qr_task_clear(payload)
         else:
             logwarn("[DualCar] unknown TCP message type: %s", msg_type)
-
-    def _dual_handle_peer_qr_task_payload(self, payload):
-        """处理 TCP qr_task 消息：更新对车占用的 box_index。"""
-        from_car = str(payload.get("from_car", ""))
-        if from_car == self._car_id:
-            return
-        code = str(payload.get("code", ""))
-        box = payload.get("box")
-        if isinstance(box, int) and 0 <= box <= 3:
-            self._peer_occupied_box = box
-            loginfo("[Main] 对车占用(TCP): box=%d (任务 %s from car %s)",
-                    box, code, from_car)
-        else:
-            logwarn("[DualCar] qr_task has invalid box: %s", box)
-
-    def _dual_handle_peer_qr_task_clear(self, payload):
-        """处理 TCP qr_task_clear 消息：清空对车占用。"""
-        from_car = str(payload.get("from_car", ""))
-        if from_car == self._car_id:
-            return
-        self._peer_occupied_box = None
-
-    def _dual_publish_allow_peer_start(self):
-        """完成配送后放行对车：通过 TCP 发送 ALLOW_START。
-
-        仅在双车模式启用、本轮尚未发送过时生效。
-        发送后本车 _dual_start_allowed 置 False，下一轮需等待对车放行。
-        """
-        if not self._dual_car_enabled:
-            return
-        if self._dual_allow_sent_this_round:
-            return
-        peer_id = self._dual_peer_id()
-
-        sent_ok = False
-        if self._dual_tcp_bridge is not None:
-            payload = {
-                "type": "allow_start",
-                "from_car": self._car_id,
-                "target_car": peer_id,
-                "stamp": time.time(),
-            }
-            sent_ok = self._dual_tcp_bridge.send(payload)
-        else:
-            logwarn(
-                "[DualCar] 无法发送 ALLOW_START:%s — TCP bridge 未启动 "
-                "(dual_car_peer_ip 未配置或为空)",
-                peer_id,
-            )
-
-        if sent_ok:
-            loginfo(
-                "[DualCar] send ALLOW_START:%s success via TCP, "
-                "peer can start while this car returns",
-                peer_id,
-            )
-        elif self._dual_tcp_bridge is not None:
-            logwarn(
-                "[DualCar] send ALLOW_START:%s failed — TCP 未连接, "
-                "消息已丢弃",
-                peer_id,
-            )
-
-        self._dual_allow_sent_this_round = True
-        self._dual_start_allowed = False
-        self._dual_waiting_at_start = False
 
     def _dual_publish_remote_task_for_peer(self, task_detection):
         """将剩余任务通过 TCP 发送给对车。
@@ -572,42 +449,13 @@ class MainController(object):
                 peer_id,
             )
 
-    def _dual_publish_qr_task(self, code, lab_window, box_index=None):
-        """发布本车任务占用或清空占用，通过 TCP 发送。
-
-        参数:
-            code:       二维码内容，空字符串表示清空。
-            lab_window: 化验窗口，空字符串表示清空。
-            box_index:  方框索引 0-3，TCP 模式发送时使用。
-        """
-        if not self._dual_car_enabled:
-            return
-
-        if self._dual_tcp_bridge is not None:
-            if code and lab_window:
-                payload = {
-                    "type": "qr_task",
-                    "from_car": self._car_id,
-                    "code": code,
-                    "lab_window": lab_window,
-                    "box": box_index if box_index is not None else 0,
-                    "stamp": time.time(),
-                }
-            else:
-                payload = {
-                    "type": "qr_task_clear",
-                    "from_car": self._car_id,
-                    "stamp": time.time(),
-                }
-            self._dual_tcp_bridge.send(payload)
-
     def _dual_apply_remote_task_if_available(self):
         """如果存在有效的远程任务，直接转换为当前任务并跳过识别板一。
 
         职责:
         1. 检查远程任务是否存在且功能已启用。
         2. 将远程任务转换为 Board1Detection，构建 RoundPlan。
-        3. 发布 /current_task、/cv2_result，通过 TCP 发送任务占用。
+        3. 发布 /cv2_result。
         4. 清空远程任务标记已消费。
         5. 切换到 GOTO_EXAM 状态。
 
@@ -666,13 +514,9 @@ class MainController(object):
             self._round_plan.exam_windows,
         )
 
-        # 发布 CV2 和任务占用（与正常识别板一流程一致）。
+        # 发布 CV2（与正常识别板一流程一致）。
         self._io.publish_cv2(
             self._round_plan.code, self._round_plan.lab_window
-        )
-        self._dual_publish_qr_task(
-            self._round_plan.code, self._round_plan.lab_window,
-            box_index=detection.box_index,
         )
 
         # 清空远程任务，标记已消费。
@@ -734,35 +578,26 @@ class MainController(object):
 
     def _do_goto_board1(self):
         """前往识别板一。导航失败时保持当前状态自动重试。"""
-        # 双车协作：检查是否允许出发，未允许则保持等待。
-        if self._dual_car_enabled and not self._dual_start_allowed:
-            if not self._dual_waiting_at_start:
-                loginfo(
-                    "[Main] 车 %s 在起点等待对车放行 (ALLOW_START) ...",
-                    self._car_id,
-                )
-            self._dual_waiting_at_start = True
+        # 双车模式下，车2不去识别板一，只等待车1分配 remote_task。
+        if self._dual_car_enabled and self._car_id == "2":
+            if self._dual_apply_remote_task_if_available():
+                return
+
+            loginfo("[Main] 车2等待车1分配 remote_task ...")
             self._cmd_vel_pub.publish(Twist())
             rospy.sleep(0.1)
             return
 
-        # 远程任务共享：如果已缓存远程任务，直接跳过识别板一。
-        if self._dual_apply_remote_task_if_available():
-            return
-
-        # 新一轮开始，重置本轮放行和远程任务发送标记。
-        self._dual_allow_sent_this_round = False
+        # 单车模式或车1模式：正常前往识别板一。
         self._dual_remote_task_sent_this_round = False
 
         loginfo("[Main] === GOTO_BOARD1 (即将进入第 %d 轮) ===",
                 self._round_index + 1)
         self._io.set_task_road()
-        # 新一轮：清空缓存，通知识别节点解锁。
         self._board1_detections = []
         self._board2_wait = None
         self._store.clear()
         self._reset_pub.publish(String())
-        self._dual_publish_qr_task("", "")
 
         ok = self._nav.go_to("board1", timeout_sec=self._nav_timeout)
         self._nav.clear_costmaps()
@@ -833,10 +668,7 @@ class MainController(object):
             self._board1_detections = []
 
         # 使用 TaskPlanner 从所有检测结果中选出最优任务。
-        best = self._planner.select_best(
-            self._board1_detections,
-            excluded_box=self._peer_occupied_box,
-        )
+        best = self._planner.select_best(self._board1_detections)
         if best is None:
             logwarn("[Main] 无有效二维码，结束本轮")
             self._consecutive_fails += 1
@@ -860,13 +692,9 @@ class MainController(object):
             self._round_plan.exam_windows,
         )
 
-        # 发布 CV2 和双车协作信息。
+        # 发布 CV2。
         self._io.publish_cv2(
             self._round_plan.code, self._round_plan.lab_window
-        )
-        self._dual_publish_qr_task(
-            self._round_plan.code, self._round_plan.lab_window,
-            box_index=best.box_index,
         )
 
         # ---- 远程任务共享：将剩余任务发送给对车 -------------------
@@ -1009,7 +837,7 @@ class MainController(object):
             self._state = STATE_DONE_ROUND
 
     def _do_at_lab(self):
-        """停在化验窗口：停 task → 投递 → 播报+放行 → 停留 → 结束本轮。"""
+        """停在化验窗口：停 task → 投递 → 播报 → 停留 → 结束本轮。"""
         lab_win = self._round_plan.lab_window
         loginfo("[Main] === AT_LAB === 停在化验窗口 %s", lab_win)
 
@@ -1017,10 +845,9 @@ class MainController(object):
         self._io.set_task(lab_win)
         # 2) 投递。
         self._store.deliver_to_lab(lab_win)
-        # 3) 先播报、放行对车，再停留，让音频播放和 dwell 重叠。
+        # 3) 先播报，再停留，让音频播放和 dwell 重叠。
         count = self._store.count_for_lab(lab_win)
         self._io.announce_lab_arrival(lab_win, count)
-        self._dual_publish_allow_peer_start()
         # 4) 停留，满足"明显停留"规则；期间音频异步播放。
         rospy.sleep(self._lab_dwell)
         # 5) 离开。
@@ -1030,12 +857,9 @@ class MainController(object):
     def _do_done_round(self):
         """本轮结束。根据策略回起点或不回起点，然后进入下一轮。"""
         loginfo("[Main] === DONE_ROUND === 本轮结束")
-        self._dual_publish_qr_task("", "")
 
         # 清理远程任务缓存，避免下一轮误用。
         self._dual_assigned_remote_task = None
-
-        # 双车放行信号已在 _do_at_lab 中发送，这里不再重复。
 
         if self._return_to_start:
             loginfo("[Main] 返回起点...")
@@ -1085,10 +909,6 @@ class MainController(object):
                     self._dual_car_listen_ip, self._dual_car_listen_port,
                     self._dual_car_peer_ip if self._dual_car_peer_ip else "(未配置)",
                     self._dual_car_peer_port)
-            if self._dual_start_allowed:
-                loginfo("  双车状态: car %s 首发，允许立即出发", self._car_id)
-            else:
-                loginfo("  双车状态: car %s 等待对车 ALLOW_START 放行", self._car_id)
             if not self._dual_car_peer_ip:
                 logwarn("  双车 TCP 模式已启用但 dual_car_peer_ip 为空，"
                         "TCP 连接将无法建立")
