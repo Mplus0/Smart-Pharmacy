@@ -1,0 +1,84 @@
+# 默认忽略仓库根目录下的所有内容
+/*
+
+# 保留 .gitignore
+!/.gitignore
+
+# 只同步以下五个项目目录
+!/dual_car_refactor/
+!/dual_car_refactor/**
+
+!/pharmacy_mplus0/
+!/pharmacy_mplus0/**
+
+!/pharmacy_mplus0_debug/
+!/pharmacy_mplus0_debug/**
+
+!/robot_navigation/
+!/robot_navigation/**
+
+!/pharmacy_pkg/
+!/pharmacy_pkg/**
+
+
+# ROS / Catkin 编译产物
+**/build/
+**/devel/
+**/install/
+**/log/
+**/logs/
+**/.catkin_tools/
+**/.catkin_workspace
+
+# ROS 运行文件
+**/.ros/
+**/*.bag
+**/*.bag.active
+**/*.bag.orig
+**/*.db3
+**/*.mcap
+**/roslaunch-*.log
+**/frames.gv
+**/frames.pdf
+
+# Python 缓存
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# CMake 和编译文件
+**/CMakeCache.txt
+**/CMakeFiles/
+**/cmake_install.cmake
+**/CTestTestfile.cmake
+**/compile_commands.json
+**/*.o
+**/*.obj
+**/*.d
+**/*.dep
+
+# 编辑器和临时文件
+**/.vscode/
+**/.idea/
+**/.settings/
+**/*~
+**/*.swp
+**/*.swo
+**/*.bak
+**/*.tmp
+**/*.orig
+**/*.rej
+
+# 系统文件
+**/.DS_Store
+**/Thumbs.db
+
+# 本地环境文件
+**/.env
+**/.env.*
+!**/.env.example
+**/*.local.yaml
+**/*.local.yml
+**/*.local.launch

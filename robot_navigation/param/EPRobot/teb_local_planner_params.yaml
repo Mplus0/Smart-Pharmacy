@@ -5,35 +5,35 @@ TebLocalPlannerROS:
  # Trajectory 轨迹/弹道
 
  teb_autosize: True #优化期间允许改变轨迹的时域长度
- dt_ref: 0.25  #change 局部路径规划的解析度，两个相邻位姿的时间
+ dt_ref: 0.3  #change 局部路径规划的解析度，两个相邻位姿的时间
  dt_hysteresis: 0.1 #允许改变的时域解析度的浮动范围
- min_samples: 5  #3
- max_samples: 200  #500
- allow_init_with_backwards_motion: False  #允许在开始时向后退来执行轨迹
- force_reinit_new_goal_dist: 0.5
+ min_samples: 3
+ max_samples: 500
+ allow_init_with_backwards_motion: True  #允许在开始时向后退来执行轨迹
+ force_reinit_new_goal_dist: 1.0
  global_plan_overwrite_orientation: True #覆盖全局路径中局部路径点的朝向
- global_plan_viapoint_sep: 0.5 #5 
- max_global_plan_lookahead_dist: 2.0  #考虑优化的全局计划子集的最大长度 #向前规划最长距离 #太大路径不平滑，太小避障和转弯时效果不好，太小还会导致小车不敢走
+ global_plan_viapoint_sep: 5.0 
+ max_global_plan_lookahead_dist: 1.5  #考虑优化的全局计划子集的最大长度 #向前规划最长距离 #太大路径不平滑，太小避障和转弯时效果不好，太小还会导致小车不敢走
  global_plan_prune_distance: 0.6
  via_points_ordered: False #如果为真，规划器遵循存储容器中通过点的顺序
  # 修改下面这行
- feasibility_check_no_poses: 4  #检测位姿可到达的时间间隔
+ feasibility_check_no_poses: 3  #检测位姿可到达的时间间隔
  exact_arc_length: False
 
- publish_feedback: False
+ publish_feedback: false
 
 
  # Robot 机器人
- max_vel_x: 1.0 #最大x向速度,
+ max_vel_x: 0.85 #最大x向速度,
  max_vel_y: 0.0  #最大y向速度，非全向为0
- max_vel_x_backwards: 0.5  #最大x后退速度
- max_vel_theta: 2.3 # the angular velocity is also bounded by min_turning_radius in case of a carlike robot (r = v / omega)1.5
- acc_lim_x: 1.0  #最大x加速度，原来为0.1zyc
+ max_vel_x_backwards: 0.8 #最大x后退速度
+ max_vel_theta: 1.5 # the angular velocity is also bounded by min_turning_radius in case of a carlike robot (r = v / omega)
+ acc_lim_x: 0.15  #最大x加速度，原来为0.1zyc
  acc_lim_y: 0  #最大y向加速度，非全向移动小车需要设置为0
- acc_lim_theta: 0.5  #最大角加速度0.42
+ acc_lim_theta: 0.42  #最大角加速度
 
  # ********************** Carlike robot parameters 阿克曼结构车的参数********************
- min_turning_radius: 0.35        #最小转弯半径
+ min_turning_radius: 0.45        #最小转弯半径
  wheelbase: 0.17                #驱动轴与转向轴之间的距离
  cmd_angle_instead_rotvel: False  #将受到的角速度信息转化为操作上的角度变化
  # ********************************************************************
@@ -46,23 +46,24 @@ TebLocalPlannerROS:
   #  line_start: [-0.11, 0.0] # for type "line"
   #  line_end: [0.11, 0.0] # for type "line"
   type: "polygon"
-  vertices: [[-0.145,-0.105], [0.145,-0.105], [0.145,0.105], [-0.145,0.105]]
+  vertices: [[-0.145,-0.11], [0.145,-0.11], [0.145,0.11], [-0.145,0.11]]
 
 
  # GoalTolerance 目标容忍度
- xy_goal_tolerance: 0.05  #目标xy偏移容忍度
- yaw_goal_tolerance: 0.10 #目标角度容忍偏移度,尝试修复Clearing costmap to unstuck robot 问题
- #解决方法来自https://gi2hub.com/pal-robotics/tiago_navigation/issues/7，原来为0.2
+
+ xy_goal_tolerance: 0.1  #目标xy偏移容忍度
+ yaw_goal_tolerance: 0.3 #目标角度容忍偏移度,尝试修复Clearing costmap to unstuck robot 问题
+ #解决方法来自https://gi2hub.com/pal-robotics/tiago_navigation/issues/7，原来为0.3
  free_goal_vel: False   #允许机器人以最大速度到达目的地，这里要停稳，所以为false
 
  # Obstacles 障碍物
 
- min_obstacle_dist: 0.115 # 与障碍的最小期望距离
- inflation_dist : 0.15  # 障碍物周围缓冲区，大于min_obstacle_dist才生效
+ min_obstacle_dist: 0.15 # 与障碍的最小期望距离
+ inflation_dist : 0  # 障碍物周围缓冲区，大于min_obstacle_dist才生效
  include_costmap_obstacles: True #是否考虑局部costmap的障碍
  include_dynamic_obstacles: True
  costmap_obstacles_behind_robot_dist: 1.0 #考虑后面n米内的障碍物
- dynamic_obstacle_inflation_dist: 0.2 #0.3与动态障碍物缓冲区
+ dynamic_obstacle_inflation_dist: 0.3 #与动态障碍物缓冲区
  obstacle_poses_affected: 15 #
  costmap_converter_plugin: ""
  costmap_converter_spin_thread: True
@@ -79,21 +80,21 @@ TebLocalPlannerROS:
  optimization_verbose: False #打印优化过程详情
  penalty_epsilon: 0.08   #对于硬约束近似，在惩罚函数中增加安全范围
  weight_max_vel_x: 2 #最大速度权重0-2
- weight_max_vel_theta: 0.8 #最大角速度权重 0-2
- weight_acc_lim_x: 0.8 #最大加速度权重0-1
- weight_acc_lim_theta: 0.5 #最大角加速度权重0-1 #1
+ weight_max_vel_theta: 1 #最大角速度权重 0-2
+ weight_acc_lim_x: 1 #最大加速度权重0-1
+ weight_acc_lim_theta: 1 #最大角加速度权重0-1
  weight_kinematics_nh: 1000 #满足非完整运动学的最优权重
- weight_kinematics_forward_drive: 700 #优化过程中，迫使机器人只选择前进方向
- weight_kinematics_turning_radius: 18.0 #在优化过程中，最小转弯半径的权重
- weight_optimaltime: 15  # 根据转换/执行时间对轨迹进行收缩的优化权重  #很重要的一个参数，值越大小车越大胆，转弯切内道，越容易拉到最大速度，也撞死得越快
- weight_obstacle: 90 #与障碍物最小距离的权重
+ weight_kinematics_forward_drive: 750 #优化过程中，迫使机器人只选择前进方向
+ weight_kinematics_turning_radius: 10.0 #在优化过程中，最小转弯半径的权重
+ weight_optimaltime: 30  # 根据转换/执行时间对轨迹进行收缩的优化权重  #很重要的一个参数，值越大小车越大胆，转弯切内道，越容易拉到最大速度，也撞死得越快
+ weight_obstacle: 50 #与障碍物最小距离的权重
  weight_dynamic_obstacle: 100 # 在优化过程中，和动态障碍物最小距离的权重
  obstacle_cost_exponent: 4.0
  weight_adapt_factor: 1.0
  weight_dynamic_obstacle_inflation: 0.8
- weight_inflation: 2.0
- weight_shortest_path: 2.0
- weight_viapoint: 25.0
+ weight_inflation: 0.8
+ weight_shortest_path: 5.0
+ weight_viapoint: 10.0
 
  # Homotopy Class Planner
 

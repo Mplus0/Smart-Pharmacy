@@ -10,7 +10,6 @@ GlobalPlanner:
   lethal_cost: 253
   neutral_cost: 60
   cost_factor: 0.6
-  publish_potential: false
+  publish_potential: true
   orientation_mode: 0
   orientation_window_size: 1
-
