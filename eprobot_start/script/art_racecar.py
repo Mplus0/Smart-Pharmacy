@@ -482,7 +482,7 @@ class BaseControl:
         imu_msg.orientation= orientation 
         imu_msg.angular_velocity.z = Vyaw
         self.imu_pub.publish(imu_msg)
-        if self.is_pub_odom_tf == 'false':
+        if self.is_pub_odom_tf == 'true':
             self.tf_broadcaster.sendTransform((self.pose_x,self.pose_y,0.0),pose_quat,self.current_time,self.baseId,self.odomId)
         self.pub.publish(msg)
 
