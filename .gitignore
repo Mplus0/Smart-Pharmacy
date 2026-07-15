@@ -1,0 +1,114 @@
+# Smart-Pharmacy selective source synchronization
+#
+# This repository is used as the ROS workspace src directory on the robots.
+# Track only the five project directories listed below. Other top-level ROS
+# packages are supplied by the robot image/vendor environment and are kept
+# locally without being synchronized through this repository.
+
+# Ignore every top-level file and directory by default.
+/*
+
+# Keep this file itself.
+!/.gitignore
+
+# Project directories synchronized through GitHub.
+!/dual_car_refactor/
+!/dual_car_refactor/**
+
+!/pharmacy_mplus0/
+!/pharmacy_mplus0/**
+
+!/pharmacy_mplus0_debug/
+!/pharmacy_mplus0_debug/**
+
+!/robot_navigation/
+!/robot_navigation/**
+
+!/pharmacy_pkg/
+!/pharmacy_pkg/**
+
+# ------------------------------------------------------------
+# ROS / Catkin generated files
+# ------------------------------------------------------------
+**/build/
+**/devel/
+**/install/
+**/log/
+**/logs/
+**/.catkin_tools/
+**/.catkin_workspace
+
+# ROS runtime data
+**/.ros/
+**/*.bag
+**/*.bag.active
+**/*.bag.orig
+**/*.db3
+**/*.mcap
+**/roslaunch-*.log
+**/frames.gv
+**/frames.pdf
+
+# ------------------------------------------------------------
+# CMake / compiler generated files
+# ------------------------------------------------------------
+**/CMakeCache.txt
+**/CMakeFiles/
+**/cmake_install.cmake
+**/CTestTestfile.cmake
+**/compile_commands.json
+**/*.o
+**/*.obj
+**/*.d
+**/*.dep
+**/*.gcda
+**/*.gcno
+**/*.gcov
+
+# ------------------------------------------------------------
+# Python generated files
+# ------------------------------------------------------------
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/.coverage.*
+**/htmlcov/
+**/*.egg-info/
+
+# Python virtual environments
+**/.venv/
+**/venv/
+**/env/
+**/ENV/
+
+# ------------------------------------------------------------
+# IDE, operating-system and temporary files
+# ------------------------------------------------------------
+**/.vscode/
+**/.idea/
+**/.settings/
+**/.DS_Store
+**/Thumbs.db
+**/*~
+**/*.swp
+**/*.swo
+**/*.bak
+**/*.tmp
+**/*.temp
+**/*.orig
+**/*.rej
+
+# Local secrets and machine-specific environment files
+**/.env
+**/.env.*
+!**/.env.example
+**/*.local.yaml
+**/*.local.yml
+**/*.local.launch
+
+# Do not ignore source/deployment assets such as YAML, launch, map, image,
+# audio, URDF, model or template files; these are required by the project.
