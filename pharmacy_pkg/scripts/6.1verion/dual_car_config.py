@@ -73,25 +73,10 @@ COMMON = {
         "locator_min": 44,
         "locator_max": 60,
         "result_min": 20,
-        "stable_frames": 3,
+        "stable_frames": 2,
         "publish_all_text": True,
         "share_all_text_topic": "/board1_all_text",
         "peer_all_text_topic": "/dual_car/peer_board1_all_text",
-
-        # v2识别策略：先找4个大窗口框，再逐窗口轻量解码；二维码数量允许为0~4。
-        "window_detect_enable": True,
-        "window_min_area": 2500,
-        "window_max_area": 80000,
-        "window_square_wh_rate": 0.45,
-        "window_dedup_distance": 55,
-        "window_inner_margin_rate": 0.16,
-        "window_warp_size": 240,
-        "window_complete_from_three": True,
-
-        # 直接扫整图二维码只作为兜底：必须看到4个二维码才排序，少于4个不猜窗口。
-        "direct_decode_enable": False,
-        "direct_min_qr_count": 4,
-        "direct_dedup_distance": 45,
     },
 
     "board2": {
@@ -102,25 +87,16 @@ COMMON = {
         "roi": (0.0, 0.0, 1.0, 1.0),
         "template_scales": [0.85, 0.95, 1.0, 1.05, 1.15],
         # 调试时可改成 "busy_5" / "free" 等；正式比赛必须为 None，才会启用真实模板匹配。
-        "force_label_for_debug": "free",
+        "force_label_for_debug": 'free',
         "force_score_for_debug": 1.0,
     },
 
     "detect": {
-        "frame_rotate_angle": 0,
-        # 板一识别阶段提高处理频率；ROS topic 模式下不会再依赖 HTTP 旧帧丢弃。
-        "drop_frame_count": 2,
-        "limit_rate_hz": 6,
+        "frame_rotate_angle": 5,
+        "drop_frame_count": 5,
+        "limit_rate_hz": 2,
         "idle_grab_sleep_sec": 0.1,
         "camera_reconnect_sleep_sec": 1.0,
-
-        # 图像输入源：默认直接订阅 ROS Image，HTTP 视频流仅作为兜底。
-        # 可选："ros_topic" / "http" / "ros_compressed"。
-        "image_source": "ros_topic",
-        "camera_topic": "/camera/rgb/image_raw",
-        "camera_fallback_to_http": True, # 是否允许 ROS 图像源异常时自动切换到 HTTP 视频流；调试时可改 False 强制使用 HTTP。
-        "camera_max_age_sec": 0.5,
-        "ros_image_buff_size": 2 ** 24,
     },
 
     "nav": {
@@ -146,13 +122,13 @@ COMMON = {
         ],
         # waypoint 顺序必须保持旧代码约定：0=C,1=A,2=B,3=4号,4=3号,5=2号,6=1号,7=起点,8=板2,9=板1
         "waypoints": {
-            "C": (1.410, 1.888, 0),  # 0.48，2.17
-            "A": (0.645, 2.430, 1),  # -0.47,2.19
-            "B": (1.385, 2.870, 2),  # -0.13，2.97
-            "lab4": (-0.950, 0.800, 3),  # -0.9，0.04
-            "lab3": (-1.800, 1.240, 4),  # -1.71，-0.12
-            "lab2": (-1.080, 1.630, 7),  # -1.48，0.55
-            "lab1": (-1.800, 2.300, 6),  # -2.29，0.74
+            "C": (1.382, 1.828, 0),
+            "A": (0.585, 2.394, 8),
+            "B": (1.439, 2.852, 2),
+            "lab4": (-0.939,0.715, 3),
+            "lab3": (-1.842,1.410, 4),
+            "lab2": (-1.161, 1.686, 7),
+            "lab1": (-1.834,2.277, 6),
             "board2": (-0.454, 3.791, 8),
             "board1": (0.591, -0.269, 9),
         },
@@ -178,7 +154,7 @@ COMMON = {
         "client_recv_timeout_sec": 2.0,
         "max_line_chars": 2048,
         # None 表示不校验口令；如现场网络不可信，可设置同一个字符串，例如 "race-secret"。
-        "shared_token": None, # 作用是在双方都设置了相同字符串时，TCP 消息里会携带这个口令，接收方验证不通过就丢弃消息；调试时可改 None 以简化流程，但正式比赛建议设置以防误连。
+        "shared_token": None,
         # True 时只接受 PEER_IP 发来的 done。若现场 IP 会漂移，可临时改 False。
         "check_peer_ip": True,
     },
@@ -202,12 +178,12 @@ CARS = {
         "peer_id": 2,
         "start_active": True,
         "use_peer_board1_result": False,
-        "camera_url": "http://192.168.124.9:8080/stream?topic=/camera/rgb/image_raw",
+        "camera_url": "http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw",
         "home_pose": (0.0, 0.0, 7),
         "tcp": {
             "local_port": 9001,
             # 这里按 car2 的 camera_url 推断为 192.168.124.9；如果现场 car2 IP 不是它，请改这里。
-            "peer_ip": "192.168.124.3",
+            "peer_ip": "192.168.124.9",
             "peer_port": 9002,
         },
     },
@@ -216,11 +192,11 @@ CARS = {
         "peer_id": 1,
         "start_active": False,
         "use_peer_board1_result": True,
-        "camera_url": "http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw",
+        "camera_url": "http://192.168.124.9:8080/stream?topic=/camera/rgb/image_raw",
         "home_pose": (-0.069, -0.269, 7),
         "tcp": {
             "local_port": 9002,
-            "peer_ip": "192.168.124.9",
+            "peer_ip": "192.168.124.3",
             "peer_port": 9001,
         },
     },
