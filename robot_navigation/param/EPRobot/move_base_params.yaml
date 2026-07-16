@@ -1,23 +1,63 @@
+# ============================================================
+# move_base_params.yaml
+# 适用于：
+# - 0.02m 高分辨率地图
+# - 500mm 窄通道
+# - 500mm × 500mm 精确停靠区
+# - TEB 局部规划器
+# - 低算力平台
+# ============================================================
+
 shutdown_costmaps: false
-controller_frequency: 5
-controller_patience: 3
-planner_frequency: 1
-planner_patience: 3
-conservative_reset_dist: 0.1
-oscillation_timeout: 5
-oscillation_distance: 0.2
+
+# 局部控制频率
+# 与 local_costmap 的 update_frequency: 5.0 保持一致
+controller_frequency: 5.0
+
+# 控制器失败容忍时间
+# 3 秒偏短，15 秒偏长，6 秒更适合比赛节奏
+controller_patience: 8.0
+
+# 全局规划频率
+# 固定小场地，不需要频繁全局重规划
+planner_frequency: 1.0
+
+# 全局规划失败容忍时间
+planner_patience: 5.0
+
+# 默认保守清除距离
+# 如果使用下面自定义 recovery，该项影响较小，但保留合理值
+conservative_reset_dist: 0.2
+
+# 震荡检测
+# 精确停靠时机器人可能小范围微调，所以 distance 不建议 0.2
+oscillation_timeout: 10.0
+oscillation_distance: 0.1
+
+# 你的底盘不适合原地旋转恢复，必须关闭
 clearing_rotation_allowed: false
+
+# 启用恢复行为，但只清除障碍层，不做旋转恢复
 recovery_behavior_enabled: true
+
 recovery_behaviors:
   - name: conservative_reset
     type: clear_costmap_recovery/ClearCostmapRecovery
   - name: aggressive_reset
     type: clear_costmap_recovery/ClearCostmapRecovery
+
+
+# 轻度清除：清除机器人周围 0.8m 的 obstacle_layer
+# 适合处理雷达噪声、短时残留障碍
 conservative_reset:
-  reset_distance: 1
+  reset_distance: 0.8
   layer_names:
     - obstacle_layer
+
+
+# 强力清除：清除机器人周围 1.5m 的 obstacle_layer
+# 你的 local_costmap 是 3m × 3m，1.5m 基本覆盖局部窗口
 aggressive_reset:
-  reset_distance: 3
+  reset_distance: 1.5
   layer_names:
     - obstacle_layer

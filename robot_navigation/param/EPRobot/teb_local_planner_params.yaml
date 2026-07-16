@@ -1,123 +1,229 @@
 TebLocalPlannerROS:
 
- odom_topic: odom
+  # ============================================================
+  # Odometry
+  # ============================================================
 
- # Trajectory 轨迹/弹道
-
- teb_autosize: True #优化期间允许改变轨迹的时域长度
- dt_ref: 0.3  #change 局部路径规划的解析度，两个相邻位姿的时间
- dt_hysteresis: 0.1 #允许改变的时域解析度的浮动范围
- min_samples: 3
- max_samples: 500
- allow_init_with_backwards_motion: True  #允许在开始时向后退来执行轨迹
- force_reinit_new_goal_dist: 1.0
- global_plan_overwrite_orientation: True #覆盖全局路径中局部路径点的朝向
- global_plan_viapoint_sep: 5.0 
- max_global_plan_lookahead_dist: 1.5  #考虑优化的全局计划子集的最大长度 #向前规划最长距离 #太大路径不平滑，太小避障和转弯时效果不好，太小还会导致小车不敢走
- global_plan_prune_distance: 0.6
- via_points_ordered: False #如果为真，规划器遵循存储容器中通过点的顺序
- # 修改下面这行
- feasibility_check_no_poses: 3  #检测位姿可到达的时间间隔
- exact_arc_length: False
-
- publish_feedback: false
+  # 使用 EKF 融合后的里程计
+  # 如果你的系统有 /slave 命名空间，可改成 odometry/filtered
+  odom_topic: /odometry/filtered
 
 
- # Robot 机器人
- max_vel_x: 0.85 #最大x向速度,
- max_vel_y: 0.0  #最大y向速度，非全向为0
- max_vel_x_backwards: 0.8 #最大x后退速度
- max_vel_theta: 1.5 # the angular velocity is also bounded by min_turning_radius in case of a carlike robot (r = v / omega)
- acc_lim_x: 0.15  #最大x加速度，原来为0.1zyc
- acc_lim_y: 0  #最大y向加速度，非全向移动小车需要设置为0
- acc_lim_theta: 0.42  #最大角加速度
+  # ============================================================
+  # Trajectory
+  # ============================================================
 
- # ********************** Carlike robot parameters 阿克曼结构车的参数********************
- min_turning_radius: 0.45        #最小转弯半径
- wheelbase: 0.17                #驱动轴与转向轴之间的距离
- cmd_angle_instead_rotvel: False  #将受到的角速度信息转化为操作上的角度变化
- # ********************************************************************
+  teb_autosize: true
 
-#轮廓
+  # 兼顾轨迹精细度和低算力
+  dt_ref: 0.25
+  dt_hysteresis: 0.08
 
- is_footprint_dynamic: False
- footprint_model: # types: "point", "circular", "two_circles", "line", "polygon"
-  #  type: "line"
-  #  line_start: [-0.11, 0.0] # for type "line"
-  #  line_end: [0.11, 0.0] # for type "line"
-  type: "polygon"
-  vertices: [[-0.145,-0.11], [0.145,-0.11], [0.145,0.11], [-0.145,0.11]]
+  min_samples: 5
+  max_samples: 80
+
+  # 精确停靠任务中不建议初始倒车
+  allow_init_with_backwards_motion: false
+
+  # 新目标距离超过该值时重新初始化轨迹
+  force_reinit_new_goal_dist: 0.5
+
+  # 让局部路径使用全局路径方向
+  global_plan_overwrite_orientation: true
+
+  # local_costmap 为 3m × 3m，前瞻距离 1.5m 比较合适
+  max_global_plan_lookahead_dist: 1.5
+  global_plan_prune_distance: 0.4
+
+  # 让 TEB 适当跟随全局路径，避免切内道
+  global_plan_viapoint_sep: 0.30
+  via_points_ordered: false
+
+  feasibility_check_no_poses: 5
+  exact_arc_length: false
+
+  publish_feedback: false
 
 
- # GoalTolerance 目标容忍度
+  # ============================================================
+  # Robot Velocity
+  # ============================================================
 
- xy_goal_tolerance: 0.1  #目标xy偏移容忍度
- yaw_goal_tolerance: 0.3 #目标角度容忍偏移度,尝试修复Clearing costmap to unstuck robot 问题
- #解决方法来自https://gi2hub.com/pal-robotics/tiago_navigation/issues/7，原来为0.3
- free_goal_vel: False   #允许机器人以最大速度到达目的地，这里要停稳，所以为false
+  # 参考第一版速度，提高比赛效率
+  max_vel_x: 1.2
 
- # Obstacles 障碍物
+  # 不建议使用第一版的 0.8，倒车太快会影响精确停靠
+  max_vel_x_backwards: 0.25
 
- min_obstacle_dist: 0.15 # 与障碍的最小期望距离
- inflation_dist : 0  # 障碍物周围缓冲区，大于min_obstacle_dist才生效
- include_costmap_obstacles: True #是否考虑局部costmap的障碍
- include_dynamic_obstacles: True
- costmap_obstacles_behind_robot_dist: 1.0 #考虑后面n米内的障碍物
- dynamic_obstacle_inflation_dist: 0.3 #与动态障碍物缓冲区
- obstacle_poses_affected: 15 #
- costmap_converter_plugin: ""
- costmap_converter_spin_thread: True
- costmap_converter_rate: 5
- legacy_obstacle_association: False
- obstacle_association_cutoff_factor: 5.0
- obstacle_association_force_inclusion_factor: 1.5
+  # 非全向/阿克曼小车
+  max_vel_y: 0.0
 
- # Optimization 优化
+  # 参考第一版
+  max_vel_theta: 1.5
 
- no_inner_iterations: 5 #被外循环调用后内循环执行优化次数
- no_outer_iterations: 4 #执行的外循环的优化次数
- optimization_activate: True #激活优化
- optimization_verbose: False #打印优化过程详情
- penalty_epsilon: 0.08   #对于硬约束近似，在惩罚函数中增加安全范围
- weight_max_vel_x: 2 #最大速度权重0-2
- weight_max_vel_theta: 1 #最大角速度权重 0-2
- weight_acc_lim_x: 1 #最大加速度权重0-1
- weight_acc_lim_theta: 1 #最大角加速度权重0-1
- weight_kinematics_nh: 1000 #满足非完整运动学的最优权重
- weight_kinematics_forward_drive: 750 #优化过程中，迫使机器人只选择前进方向
- weight_kinematics_turning_radius: 10.0 #在优化过程中，最小转弯半径的权重
- weight_optimaltime: 30  # 根据转换/执行时间对轨迹进行收缩的优化权重  #很重要的一个参数，值越大小车越大胆，转弯切内道，越容易拉到最大速度，也撞死得越快
- weight_obstacle: 50 #与障碍物最小距离的权重
- weight_dynamic_obstacle: 100 # 在优化过程中，和动态障碍物最小距离的权重
- obstacle_cost_exponent: 4.0
- weight_adapt_factor: 1.0
- weight_dynamic_obstacle_inflation: 0.8
- weight_inflation: 0.8
- weight_shortest_path: 5.0
- weight_viapoint: 10.0
+  # 参考第一版，较小加速度有利于平顺和精确停靠
+  acc_lim_x: 0.15
+  acc_lim_y: 0.0
+  acc_lim_theta: 0.42
 
- # Homotopy Class Planner
 
- enable_homotopy_class_planning: False
- enable_multithreading: True
- simple_exploration: False
- max_number_classes: 3
- selection_cost_hysteresis: 1.0
- selection_obst_cost_scale: 1.0
- selection_viapoint_cost_scale: 1.0
- selection_alternative_time_cost: False
- roadmap_graph_no_samples: 15
- roadmap_graph_area_width: 5
- roadmap_graph_area_length_scale: 1.0
- h_signature_prescaler: 0.5
- h_signature_threshold: 0.1
- obstacle_keypoint_offset: 0.1
- obstacle_heading_threshold: 0.45
- visualize_hc_graph: False
+  # ============================================================
+  # Carlike Robot Parameters
+  # ============================================================
 
- # Recovery
- shrink_horizon_backup: true
- shrink_horizon_min_duration: 10
- oscillation_recovery: True #这个从false打开了
- oscillation_recovery_min_duration: 10
- oscillation_filter_duration: 10
+  # 根据你前两版参数，0.43~0.45 都合理
+  # 如果实测小车转不过窄通道转角，可尝试降到 0.40
+  min_turning_radius: 0.45
+
+  # 注意：这里最好和 art_racecar.py / 底盘 launch 里的 wheelbase 一致
+  # 如果你在 launch 中实际传了 0.21，就把这里改成 0.21
+  wheelbase: 0.21
+
+  # art_racecar.py 默认接收 cmd_vel.angular.z，再转换为转向角
+  # 所以这里必须保持 false
+  cmd_angle_instead_rotvel: false
+
+
+  # ============================================================
+  # Footprint
+  # ============================================================
+
+  is_footprint_dynamic: false
+
+  footprint_model:
+    type: "polygon"
+    vertices: [[-0.14, -0.11], [0.14, -0.11], [0.14, 0.11], [-0.14, 0.11]]
+
+
+  # ============================================================
+  # Goal Tolerance
+  # ============================================================
+
+  # 精确停进 500mm × 500mm 区域，建议 5cm
+  # 如果实车低速性能不好，可临时放宽到 0.06~0.08
+  xy_goal_tolerance: 0.07
+
+  # 约 4.6°
+  yaw_goal_tolerance: 0.15
+
+  # 到目标点必须停稳
+  free_goal_vel: false
+
+
+  # ============================================================
+  # Obstacles
+  # ============================================================
+
+  # 车宽约 0.22m，500mm 通道居中时左右余量约 0.14m
+  # 0.15 太保守，0.05 偏贴边，0.07 更适合
+  min_obstacle_dist: 0.07
+
+  # 必须大于 min_obstacle_dist，用软约束引导远离障碍
+  inflation_dist: 0.18
+
+  include_costmap_obstacles: true
+
+  # 没有明确动态障碍预测模型时建议关闭
+  include_dynamic_obstacles: false
+
+  # 后方障碍物考虑距离，不需要太大
+  costmap_obstacles_behind_robot_dist: 0.6
+
+  dynamic_obstacle_inflation_dist: 0.15
+
+  obstacle_poses_affected: 10
+
+  costmap_converter_plugin: ""
+  costmap_converter_spin_thread: false
+  costmap_converter_rate: 5
+
+  legacy_obstacle_association: false
+  obstacle_association_cutoff_factor: 5.0
+  obstacle_association_force_inclusion_factor: 1.5
+
+
+  # ============================================================
+  # Optimization
+  # ============================================================
+
+  no_inner_iterations: 5
+  no_outer_iterations: 4
+
+  optimization_activate: true
+  optimization_verbose: false
+
+  penalty_epsilon: 0.05
+
+  weight_max_vel_x: 2
+  weight_max_vel_theta: 1
+
+  weight_acc_lim_x: 1
+  weight_acc_lim_theta: 1
+
+  # 非完整约束，车式/阿克曼底盘必须较高
+  weight_kinematics_nh: 1000
+
+  # 鼓励前进，但不完全禁止必要的小幅倒车
+  weight_kinematics_forward_drive: 800
+
+  # 加强最小转弯半径约束，避免规划出实际转不过去的轨迹
+  weight_kinematics_turning_radius: 20.0
+
+  # 保留一定速度优势，但不要像第一版 30 那么激进
+  weight_optimaltime: 12
+
+  # 障碍物权重略高，适合窄通道和任务区
+  weight_obstacle: 70
+
+  weight_dynamic_obstacle: 100
+  obstacle_cost_exponent: 4.0
+
+  weight_adapt_factor: 1.2
+
+  weight_dynamic_obstacle_inflation: 0.6
+  weight_inflation: 0.8
+
+  # 不要太高，否则会过度追求最短路径、容易贴边
+  weight_shortest_path: 1.0
+
+  # 配合 global_plan_viapoint_sep: 0.30，让局部路径更跟随全局居中路径
+  weight_viapoint: 12.0
+
+
+  # ============================================================
+  # Homotopy Class Planner
+  # ============================================================
+
+  # 小型固定竞赛场地，不建议开启同伦多路径，省算力且更稳定
+  enable_homotopy_class_planning: false
+  enable_multithreading: false
+
+  simple_exploration: false
+  max_number_classes: 2
+
+  selection_cost_hysteresis: 1.0
+  selection_obst_cost_scale: 1.0
+  selection_viapoint_cost_scale: 1.0
+  selection_alternative_time_cost: false
+
+  roadmap_graph_no_samples: 15
+  roadmap_graph_area_width: 5
+  roadmap_graph_area_length_scale: 1.0
+
+  h_signature_prescaler: 0.5
+  h_signature_threshold: 0.1
+  obstacle_keypoint_offset: 0.1
+  obstacle_heading_threshold: 0.45
+  visualize_hc_graph: false
+
+
+  # ============================================================
+  # Recovery
+  # ============================================================
+
+  shrink_horizon_backup: true
+  shrink_horizon_min_duration: 5
+
+  oscillation_recovery: true
+  oscillation_recovery_min_duration: 5
+  oscillation_filter_duration: 5

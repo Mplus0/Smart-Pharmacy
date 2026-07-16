@@ -1,21 +1,78 @@
 local_costmap:
-  global_frame: odom #在局部代价地图中的全局坐标系，一般需要设置为odom_frame，原为map，修改为odom
-  robot_base_frame: base_footprint # 机器人本体的基坐标系
-  update_frequency: 5.0 #局部代价地图更新频率
-  publish_frequency: 5.0 #发布频率
-  # 以上不用修改
-  # static_map: false #delete warning by zyc
-  rolling_window: true #设定为当前局部地图的中心位置
-  # width和height可以微调
-  width: 2 #代价地图的尺寸
-  height: 2 #代价地图的尺寸
-  # 以下两行不用修改
-  resolution: 0.05 #代价地图（滚动窗口）的分辨率，一般和地图设置一致
-  transform_tolerance: 0.5 #局部代价地图中的坐标系之间转换的最大可忍受延时
+  # 局部代价地图建议使用 odom
+  # odom 连续性比 map 好，适合局部规划器实时避障和轨迹跟踪
+  global_frame: map
 
-  cost_scaling_factor: 10 #为局部路径规划器服务
-  inflation_radius: 0.15  #为局部路径规划器服务
+  # 机器人基坐标系
+  robot_base_frame: base_footprint
 
-  plugins: #改过了
-   - {name: obstacle_layer,      type: "costmap_2d::ObstacleLayer"}
-   - {name: inflation_layer,     type: "costmap_2d::InflationLayer"}
+  # 局部代价地图更新频率
+  # 5Hz 对低算力平台和小场地是比较平衡的值
+  update_frequency: 5.0
+
+  # 发布频率主要用于 RViz 显示，不需要和更新频率一样高
+  publish_frequency: 2.0
+
+  # 局部代价地图使用滚动窗口
+  rolling_window: true
+
+  # 局部窗口大小
+  # 3.0m 视野更充分，适合窄通道、转弯、任务点靠近障碍物的场景
+  # 0.02 分辨率下为 150 × 150 栅格，计算量仍可接受
+  width: 3.0
+  height: 3.0
+
+  # 与你的地图分辨率一致
+  # 对 500mm × 500mm 停靠区更友好
+  resolution: 0.02
+
+  # TF 容忍时间
+  # 0.5 比较稳，不建议直接用 0.8，容易掩盖 TF 延迟问题
+  transform_tolerance: 0.5
+
+  # 不使用 static_map 参数
+  # 使用 plugins 模式时，不建议再写 static_map: false
+
+  plugins:
+    - {name: obstacle_layer,  type: "costmap_2d::ObstacleLayer"}
+    - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
+
+  # 局部障碍物层
+  # 这里覆盖 common 中的范围，降低局部代价地图计算压力
+  obstacle_layer:
+    enabled: true
+
+    # 局部避障不需要看太远
+    # 你的局部窗口半径约 1.5m，设 2.0 已经足够
+    obstacle_range: 2.0
+
+    # 清除范围略大于 obstacle_range，避免残留障碍物
+    raytrace_range: 2.5
+
+    # 已知固定竞赛地图，局部也不追踪未知区域
+    track_unknown_space: false
+
+    combination_method: 1
+
+    observation_sources: laser_scan_sensor
+
+    laser_scan_sensor:
+      data_type: LaserScan
+      topic: /scan_filtered
+      marking: true
+      clearing: true
+      inf_is_valid: true
+      observation_persistence: 0.0
+      expected_update_rate: 0.0
+
+  # 局部膨胀层
+  inflation_layer:
+    enabled: true
+
+    # 局部比全局略小
+    # 全局推荐 0.26，用于引导路径走中间
+    # 局部推荐 0.22，用于兼顾避障和精确进点
+    inflation_radius: 0.22
+
+    # 衰减较快，避免窄通道和 500mm 任务区被软堵死
+    cost_scaling_factor: 10.0

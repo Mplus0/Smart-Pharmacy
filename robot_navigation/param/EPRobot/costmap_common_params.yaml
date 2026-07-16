@@ -1,24 +1,88 @@
-# 这个文件不需要改
-footprint: [ [-0.145,-0.11], [0.145,-0.11], [0.145,0.11], [-0.145,0.11] ] #车辆尺寸，按照米为单位
-# x方向是机器人正直前进方向
-# map_type: costmap #世界的2D表示,删除来消除警告
+# ============================================================
+# costmap_common_params.yaml
+# 适用场景：
+# - 医院主题竞赛小型场地
+# - 场地尺寸约 3.8m × 4.9m
+# - 存在 500mm 窄通道
+# - 机器人 footprint 约 0.29m × 0.22m
+# - 使用滤波后的雷达话题 /scan_filtered
+# - 低算力平台
+# ============================================================
 
-obstacle_layer: #障碍物层
- enabled: true # 启用障碍物层
- obstacle_range: 6.5 #设置机器人检测障碍物的最大范围
- raytrace_range: 6.0 #用来设置机器人检测自由空间的最大范围
-#  inflation_radius: 0.05不是很能理解这里膨胀半径在干吗
- track_unknown_space: false #代价值就只分为致命碰撞和自由区域两种
- combination_method: 1
- observation_sources: laser_scan_sensor #数据源
- laser_scan_sensor: {data_type: LaserScan, topic: scan, marking: true, clearing: true}
+# 机器人底盘轮廓，单位：m
+# x 方向为机器人前进方向，y 方向为左右方向
+# 尺寸约为：长 0.29m，宽 0.22m
+footprint: [[-0.14, -0.11], [0.14, -0.11], [0.14, 0.11], [-0.14, 0.11]]
 
-static_layer:  # 静态地图层
-  enabled:              true
-  map_topic:            "/map"
+# 不额外扩大 footprint，避免 500mm 窄通道被过度压缩
+# 如果实车容易擦边，可改为 0.005 或 0.01
+footprint_padding: 0.0
 
-inflation_layer:  #膨胀物层
-  enabled:              true  #启用该层
-  cost_scaling_factor:  10  # 膨胀过程中应用到代价值的比例因子，增大该比例因子会降低代价值
-  inflation_radius:     0.15  # 膨胀半径，全局路径离障碍太近时调大，但不能覆盖整个道路
-  #膨胀半径至少为小车外接圆的半径。上面两个参数都会被各自代价地图的参数重新定义
+# TF 容忍时间
+# 低算力平台上 0.2s 偶尔偏紧，建议用 0.3s
+transform_tolerance: 0.3
+
+
+# ============================================================
+# 静态地图层
+# ============================================================
+static_layer:
+  enabled: true
+  map_topic: "/map"
+
+
+# ============================================================
+# 障碍物层
+# ============================================================
+obstacle_layer:
+  enabled: true
+
+  # 动态障碍物检测范围
+  # 场地较小，不建议使用 6m 以上，否则增加计算压力且意义不大
+  obstacle_range: 3.0
+
+  # 射线清除范围应略大于 obstacle_range
+  # 用于清除雷达视野内已经不存在的障碍物
+  raytrace_range: 3.5
+
+  # 固定竞赛地图，建议 false
+  # 否则地图边缘、切角、窄通道附近的未知区域可能影响规划
+  track_unknown_space: false
+
+  # 1 表示与其他层取最大代价值，常用且合理
+  combination_method: 1
+
+  # 使用滤波后的雷达
+  observation_sources: laser_scan_sensor
+
+  laser_scan_sensor:
+    data_type: LaserScan
+    topic: /scan_filtered
+    marking: true
+    clearing: true
+
+    # 如果雷达最大距离返回 inf，建议保留 true，有利于清除自由空间
+    inf_is_valid: true
+
+    # 不保留历史观测，降低残留障碍影响
+    observation_persistence: 0.0
+
+    # 不强制要求固定更新频率，避免低算力时偶发丢帧导致报警
+    expected_update_rate: 0.0
+
+
+# ============================================================
+# 膨胀层
+# ============================================================
+inflation_layer:
+  enabled: true
+
+  # 膨胀半径
+  # 机器人半对角线约 sqrt(0.145^2 + 0.11^2) ≈ 0.18m
+  # 该值兼顾安全距离和 500mm 窄通道通过性
+  #inflation_radius: 0.18
+
+  # 代价衰减因子
+  # 值越大，代价下降越快，路径更容易通过窄通道
+  # 值越小，路径会更远离障碍物，但窄通道可能被“软堵死”
+  #cost_scaling_factor: 10.0

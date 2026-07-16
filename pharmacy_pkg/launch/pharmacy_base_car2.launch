@@ -1,0 +1,15 @@
+<launch>
+    <!--
+        car2 基础层：
+        和 car1 一样启动导航框架与 web_video_server。
+        如果 car2 的基础 launch 文件不同，在这里替换 include 即可。
+    -->
+
+    <include file="$(find pharmacy_pkg)/launch/smart_pharmacy_demo_init.launch" />
+    <include file="$(find astra_camera)/launch/astra.launch" />
+
+    <node pkg="web_video_server"
+          type="web_video_server"
+          name="web_video_server"
+          output="screen" />
+</launch>

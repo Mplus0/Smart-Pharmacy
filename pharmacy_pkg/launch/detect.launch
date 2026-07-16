@@ -1,0 +1,3 @@
+<launch>
+    <node name="pharmacy_pkg" pkg="pharmacy_pkg" type="detect_abc_for_EPRobot.py" cwd="node" />
+</launch>

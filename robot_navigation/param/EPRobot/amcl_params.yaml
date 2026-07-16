@@ -4,35 +4,76 @@ odom_frame_id: "odom"
 base_frame_id: "base_footprint"
 global_frame_id: "map"
 
-## Publish scans from best pose at a max of 10 Hz
+# 差速驱动模型
 odom_model_type: "diff"
-odom_alpha5: 0.1
-gui_publish_rate: 10.0
+
+# 差速模型下一般不用 alpha5
+odom_alpha5: 0.0
+
+# 降低 GUI 发布频率，减轻低算力平台压力
+gui_publish_rate: 5.0
+
+# 激光参数
+# 场地对角线约 6.2m，6.0m 基本够用
+laser_max_range: 6.0
+
+# 低算力与定位精度的折中值
 laser_max_beams: 60
-laser_max_range: 12.0
+
+# 粒子数
+# 小场地、固定起点、低算力平台下比较均衡
 min_particles: 500
-max_particles: 2000
+max_particles: 1500
+
+# KLD 自适应采样参数
 kld_err: 0.05
 kld_z: 0.99
-odom_alpha1: 0.2
-odom_alpha2: 0.2
-## translation std dev, m 
-odom_alpha3: 0.2
-odom_alpha4: 0.2
-laser_z_hit: 0.5
-aser_z_short: 0.05
-laser_z_max: 0.05
-laser_z_rand: 0.5
-laser_sigma_hit: 0.2
-laser_lambda_short: 0.1
-laser_model_type: "likelihood_field" # "likelihood_field" or "beam"
-laser_likelihood_max_dist: 2.0
-update_min_d: 0.25
-update_min_a: 0.2
 
+# 里程计噪声参数
+# 比 0.2 更保守，比 0.35/0.25 更利于精确收敛
+odom_alpha1: 0.30
+odom_alpha2: 0.20
+odom_alpha3: 0.20
+odom_alpha4: 0.30
+
+# 激光测量模型参数
+# 场地固定且使用滤波雷达，适当提高 hit 权重
+laser_z_hit: 0.80
+laser_z_short: 0.05
+laser_z_max: 0.05
+laser_z_rand: 0.10
+
+laser_sigma_hit: 0.15
+laser_lambda_short: 0.1
+
+# 低算力平台推荐 likelihood_field
+laser_model_type: "likelihood_field"
+
+# 小型固定场地建议略收紧
+laser_likelihood_max_dist: 1.2
+
+# 更新阈值
+# 适合 500mm 窄通道和 500mm×500mm 任务点精确停靠
+update_min_d: 0.10
+update_min_a: 0.06
+
+# 每次更新后重采样，定位更及时
 resample_interval: 1
 
-## Increase tolerance because the computer can get quite busy 
-transform_tolerance: 1.0
+# TF 容忍时间
+# 如果低算力平台 TF 报错，再改回 1.0
+transform_tolerance: 0.7
+
+# 定位恢复参数
+# 保留一定恢复能力，防止偶发定位发散
 recovery_alpha_slow: 0.001
 recovery_alpha_fast: 0.1
+
+#后续修改建议：如果发现 CPU 占用还是高，可以优先改这三项：
+#laser_max_beams: 45
+#min_particles: 400
+#max_particles: 1200
+#如果发现进窄通道、转弯进任务点时定位还有滞后，可以改成：
+#update_min_d: 0.10
+#update_min_a: 0.05
+#但算力会有压力

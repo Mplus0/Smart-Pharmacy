@@ -1,0 +1,22 @@
+<launch>
+    <!--
+        car2 业务层：
+        双车 TCP、裁判通信、视觉识别。
+        文件名按 car2 版本写死。
+    -->
+
+    <node pkg="pharmacy_pkg"
+          type="tcp_link_car2.py"
+          name="tcp_link_car2"
+          output="screen" />
+
+    <node pkg="pharmacy_pkg"
+          type="referee_client_v2_car2.py"
+          name="referee_client_v2_car2"
+          output="screen" />
+
+    <node pkg="pharmacy_pkg"
+          type="F1_detect_code_v4_car2.py"
+          name="F1_detect_code_v4_car2"
+          output="screen" />
+</launch>

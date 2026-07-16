@@ -1,15 +1,38 @@
 GlobalPlanner:
+  # 固定竞赛地图，不允许走未知区域
   allow_unknown: false
-  default_tolerance: 0.2
+
+  # 精确停靠任务不建议 0.2，避免目标点偏移太大
+  # 如果偶发规划不到目标，可放宽到 0.08
+  default_tolerance: 0.08
+
+  # 不发布势场可视化，降低资源占用
   visualize_potential: false
+  publish_potential: false
+
+  # 小地图使用 Dijkstra 稳定性更好
   use_dijkstra: true
+
+  # 使用二次近似，让路径更平滑
   use_quadratic: true
+
+  # false 表示不强制沿网格边走，路径更自然
   use_grid_path: false
+
+  # 不使用旧版 navfn 行为
   old_navfn_behavior: false
- 
+
+  # 保持默认高阈值，避免把膨胀区过早视为不可通行
+  # 不建议使用 200
   lethal_cost: 253
+
+  # 自由空间基础代价
   neutral_cost: 60
+
+  # 代价缩放因子
+  # 0.6 与 global_costmap 的 inflation_radius: 0.26 / cost_scaling_factor: 8.0 匹配较好
   cost_factor: 0.6
-  publish_potential: true
+
+  # 路径方向由局部规划器处理，尤其你使用 TEB 时这里保持 0 即可
   orientation_mode: 0
   orientation_window_size: 1

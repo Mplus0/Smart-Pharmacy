@@ -13,68 +13,99 @@
     <include file="$(find robot_navigation)/launch/lidar.launch">
         <arg name="lidar_frame"            value="$(arg lidar_frame)"/>  
     </include-->
-	
-	<!-- 获取机器人类型的环境变量的值 -->
-    <arg name="CAR_TYPE" value="$(optenv ROBOT_TYPE EPRobotV2.3)" />
 
-	
-	
-	
-	
-	<!-- <node pkg="tf" type="static_transform_publisher" name="base_to_link" args="0.08 0 0 0 0 0 base_footprint base_link 20" /> -->
- 	<!-- <node pkg="tf" type="static_transform_publisher" name="base_to_gyro" args="0.08 0 0 0 0 0 base_footprint gyro_link 20" /> -->
-	<!-- <node pkg="tf" type="static_transform_publisher" name="base_to_laser" args="0.14 0 0.11 0 0 0 base_footprint base_laser_link 20" /> -->
-	<!-- <node pkg="tf" type="static_transform_publisher" name="base_to_camera" args="0.14 0 0.11 0 0 0 base_footprint camera_link 20" /> -->
-	
-	<param name = "robot_description" textfile = "$(find eprobot_description)/urdf/eprobot.urdf"/>
-	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
-	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
-	
-	<arg name="lidar_frame" default="base_laser_link"/>  
-	
-	<arg name="is_send_anger" default="false"/>
+    <!-- 获取机器人类型的环境变量的值 -->
+    <arg name="CAR_TYPE" value="$(env ROBOT_TYPE)" />
 
-	<arg name="lidar_mode" default="Boost"/>
-	
-	<node pkg="eprobot_start" type="art_racecar.py" name="base_control" output="screen">
-		<param name="base_kp"    type="double" value="1000.0"/>
-		<param name="base_ki"    type="double" value="100.0"/>
-		<param name="base_kd"    type="double" value="0.0"/>
-		<param name="wheelbase" type="double" value="0.21"/>
-		
-		<!--param name="base_kp"    type="double" value="0.5"/>
-		<param name="base_ki"    type="double" value="17.0"/>
-		<param name="base_kd"    type="double" value="5.0"/--> 
-		
-		<param name="base_kv"    type="double" value="1.089"/>
-		
-		<param name="Laser_Mode"    type="string" value="$(arg lidar_mode)"/>
-		<param name="is_send_anger"   type="string"      value="$(arg is_send_anger)"/>
-		
-	</node>
-	
-	
-	<group if="$(eval CAR_TYPE=='EPRobotV2.2')">
-	    <include file="$(find ls01d)/launch/ls01d.launch">
-	    </include>
-	</group>
-	
-	<group if="$(eval CAR_TYPE=='EPRobotV2.3')">
-	    <include file="$(find lslidar_driver)/launch/lslidar_serial.launch">
-	    </include>
-	</group>
-	
-	
+
+    <!-- <node pkg="tf" type="static_transform_publisher" name="base_to_link" args="0.08 0 0 0 0 0 base_footprint base_link 20" /> -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="base_to_gyro" args="0.08 0 0 0 0 0 base_footprint gyro_link 20" /> -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="base_to_laser" args="0.14 0 0.11 0 0 0 base_footprint base_laser_link 20" /> -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="base_to_camera" args="0.14 0 0.11 0 0 0 base_footprint camera_link 20" /> -->
+
+    <param name="robot_description" textfile="$(find eprobot_description)/urdf/eprobot.urdf"/>
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+    <arg name="lidar_frame" default="base_laser_link"/>
+
+    <!-- ========================================================= -->
+    <!-- Base control parameters -->
+    <!-- ========================================================= -->
+
+    <!-- 是否直接发送转向角。
+         保持 false：TEB 输出 cmd_vel.angular.z，art_racecar.py 内部转换为转向角。 -->
+    <arg name="is_send_anger" default="false"/>
+
+    <!-- 实车轴距，必须和 TEB 的 wheelbase 保持一致 -->
+    <arg name="wheelbase" default="0.21"/>
+
+    <!-- 精确停靠用，原来的 0.1m/s 太大 -->
+    <arg name="min_cmd_vel_x" default="0.03"/>
+
+    <!-- 必须 false：由 EKF 发布 odom -> base_footprint，底盘节点不要重复发布 TF -->
+    <arg name="is_pub_odom_tf" default="false"/>
+
+    <!-- yaw 和 vyaw 符号，先保持 -1.0。
+         如果实测逆时针左转时 /imu_data/angular_velocity.z 为负，再把两个一起改成 1.0。 -->
+    <arg name="yaw_sign" default="-1.0"/>
+    <arg name="vyaw_sign" default="-1.0"/>
+
+    <!-- 雷达模式参数。主 launch 如果传入 lidar_mode，可以接收；不传则默认 Boost。 -->
+    <arg name="lidar_mode" default="Boost"/>
+
+
+    <node pkg="eprobot_start" type="art_racecar.py" name="base_control" output="screen">
+        <param name="base_kp" type="double" value="1000.0"/>
+        <param name="base_ki" type="double" value="100.0"/>
+        <param name="base_kd" type="double" value="0.0"/>
+
+        <!--param name="base_kp"    type="double" value="0.5"/>
+        <param name="base_ki"    type="double" value="17.0"/>
+        <param name="base_kd"    type="double" value="5.0"/-->
+
+        <param name="base_kv" type="double" value="1.089"/>
+
+        <!-- 雷达模式 -->
+        <param name="Laser_Mode" type="string" value="$(arg lidar_mode)"/>
+
+        <!-- Ackermann/车式底盘核心参数 -->
+        <param name="wheelbase" type="double" value="$(arg wheelbase)"/>
+
+        <!-- 精确停车相关参数 -->
+        <param name="min_cmd_vel_x" type="double" value="$(arg min_cmd_vel_x)"/>
+
+        <!-- TF 发布控制：必须 false，避免和 EKF 同时发布 odom -> base_footprint -->
+        <param name="is_pub_odom_tf" type="bool" value="$(arg is_pub_odom_tf)"/>
+
+        <!-- 保持 false，让 art_racecar.py 把 angular.z 转换为 steering angle -->
+        <param name="is_send_anger" type="bool" value="$(arg is_send_anger)"/>
+
+        <!-- IMU yaw / yaw-rate 方向修正 -->
+        <param name="yaw_sign" type="double" value="$(arg yaw_sign)"/>
+        <param name="vyaw_sign" type="double" value="$(arg vyaw_sign)"/>
+    </node>
+
+
+    <group if="$(eval CAR_TYPE=='EPRobotV2.2')">
+        <include file="$(find ls01d)/launch/ls01d.launch">
+        </include>
+    </group>
+
+    <group if="$(eval CAR_TYPE=='EPRobotV2.3')">
+        <include file="$(find lslidar_driver)/launch/lslidar_serial.launch">
+        </include>
+    </group>
+
+
     <!--include file="$(find robot_navigation)/launch/lidar/$(arg lidar_type).launch"-->
-	<!--include file="$(find robot_navigation)/launch/lidar/rplidar.launch">
+    <!--include file="$(find robot_navigation)/launch/lidar/rplidar.launch">
         <arg name="lidar_frame"            value="$(arg lidar_frame)"/>
-		<arg name="lidar_mode"            value="$(arg lidar_mode)"/>
+        <arg name="lidar_mode"            value="$(arg lidar_mode)"/>
     </include-->
-	
-	<!--node pkg="tf" type="static_transform_publisher" name="base_footprint_to_laser"
+
+    <!--node pkg="tf" type="static_transform_publisher" name="base_footprint_to_laser"
         args="0.0624 0.0 0.115 3.14159265 0.0 0.0 base_footprint $(arg lidar_frame) 20">
     </node-->
-	
 
-    
 </launch>
