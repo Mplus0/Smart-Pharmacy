@@ -38,19 +38,23 @@
 ```text
 dual_car_refactor/
 ├── README.md                         # 本说明
+├── STRUCTURE_REFACTOR_PLAN.md        # 后续结构规范化方案
 ├── README_board1_v2_ros_topic.md     # 板一 ROS 图像输入的简要变更记录
+├── README_waypoint_test.md           # 单航点测试详细说明
 ├── README_启动文件说明.md             # 原始启动说明
 ├── launch/
 │   ├── base_camera_nav.launch        # 仅基础导航、摄像头和视频流
 │   ├── pharmacy_main_no_referee.launch # 主业务，不含裁判通信
-│   └── referee_only.launch           # 仅裁判通信
+│   ├── referee_only.launch           # 仅裁判通信
+│   └── test_move_to_waypoint.launch  # 单航点导航测试
 └── scripts/
     ├── dual_car_config.py            # 两车共用的集中配置
     ├── board1_selection.py           # 板一任务选择纯逻辑
     ├── F1_detect_code_v5.py          # 合并后的板一/板二视觉节点
     ├── F1_yaofang_v5.py              # 导航与双车轮流状态机
     ├── tcp_link_v2.py                # 两车之间的 TCP 桥接节点
-    └── referee_client_v3.py          # 向裁判系统上报状态
+    ├── referee_client_v3.py          # 向裁判系统上报状态
+    └── test_move_to_waypoint.py      # 独立航点测试节点
 ```
 
 ### 3.1 `dual_car_config.py`
@@ -114,7 +118,32 @@ dual_car_refactor/
 {"id":"1","speed":0.0,"odom":[0.0,0.0],"task":"R","CV1":"None","CV2":"None"}
 ```
 
-断线后自动重连。这里的 `odom` 直接使用 `/odometry/filtered` 的 pose，不再通过 TF 查询地图坐标，因此要确认该话题中的坐标含义符合裁判协议。
+断线后自动重连。当前版本把速度和位置拆开取值：
+
+- `speed` 来自 `/odometry/filtered.twist` 的平面速度；
+- `odom` 由定时器以 4 Hz 查询 TF `map → base_footprint`，失败时回退到 `map → base_link`；
+- 成功使用某个底盘坐标系后会优先继续查询该坐标系；
+- TF 暂时不可用时保留上一次成功位置，并以节流日志提示。
+
+因此裁判 JSON 中的 `odom` 是地图坐标，而不是直接使用里程计消息中的 pose。
+
+### 3.7 `test_move_to_waypoint.py`
+
+用于脱离完整比赛状态机，单独验证集中配置里的导航点：
+
+```text
+A、B、C、lab1～lab4、board1、board2、home
+```
+
+节点从 `dual_car_config.py` 读取航点和朝向，支持：
+
+- 按 `CAR_ID` 使用对应车辆的 `home_pose`；
+- 等待 move_base action server；
+- 出发前可选清除代价地图；
+- 导航超时后取消目标并返回不同退出码；
+- `dry_run` 只打印目标坐标和朝向，不发送导航目标。
+
+配套文件为 `launch/test_move_to_waypoint.launch`，详细操作见 `README_waypoint_test.md`。
 
 ---
 
@@ -151,7 +180,8 @@ dual_car_refactor/
 | `/detect_abc_*` | `F1_detect_code_v5.py` | `/nav_state`、摄像头图像 | `/cam_return`、`/board2_return`、`/board1_all_text` |
 | `/nav_pharmacy` | `F1_yaofang_v5.py` | `/cam_return`、`/board2_return`、`/dual_car/peer_done`、`/dual_car/peer_board1_all_text` | `/nav_state`、`/referee_task`、`/referee_cv1`、`/referee_cv2`、`/dual_car/round_done` |
 | `/dual_car_tcp_link_carN` | `tcp_link_v2.py` | `/dual_car/round_done`、`/board1_all_text` | `/dual_car/peer_done`、`/dual_car/peer_board1_all_text` |
-| `/referee_client_node_*` | `referee_client_v3.py` | `/odometry/filtered`、三个 `/referee_*` 话题 | 无 ROS 输出；通过 TCP 上报 |
+| `/referee_client_node_*` | `referee_client_v3.py` | `/odometry/filtered`、`/tf`、三个 `/referee_*` 话题 | 无 ROS 输出；通过 TCP 上报 |
+| `/test_move_to_waypoint` | `test_move_to_waypoint.py` | move_base action 状态 | 向 move_base 发送单个测试目标（`dry_run` 时不发送） |
 
 重要消息格式：
 
@@ -175,8 +205,8 @@ dual_car_refactor/
 
 ```text
 ~/robot_ws/src/pharmacy_pkg/
-├── launch/       # 三个 launch 文件
-├── scripts/      # 六个 Python 文件
+├── launch/       # 四个 launch 文件
+├── scripts/      # 七个 Python 文件
 ├── pictures/board_2/
 │   ├── free.png
 │   └── busy_5.png ... busy_10.png
@@ -194,7 +224,7 @@ ROS/Python 运行依赖至少包括：
 
 ```bash
 cd ~/robot_ws/src/pharmacy_pkg/scripts
-chmod +x F1_detect_code_v5.py F1_yaofang_v5.py tcp_link_v2.py referee_client_v3.py
+chmod +x F1_detect_code_v5.py F1_yaofang_v5.py tcp_link_v2.py referee_client_v3.py test_move_to_waypoint.py
 ```
 
 `dual_car_config.py` 和 `board1_selection.py` 必须与可执行脚本处于同一 Python 搜索目录。
@@ -296,6 +326,38 @@ roslaunch pharmacy_pkg base_camera_nav.launch
 
 该 launch 只启动导航、Astra 摄像头和 web_video_server，不启动智慧药房业务。
 
+### 8.6 单独测试航点
+
+航点测试时不要启动完整药房状态机。可以先只启动基础导航：
+
+```bash
+roslaunch pharmacy_pkg pharmacy_main_no_referee.launch \
+  car_id:=1 \
+  start_dual_tcp:=false \
+  start_detect:=false \
+  start_nav_pharmacy:=false \
+  start_camera:=false \
+  start_video_server:=false
+```
+
+第一次建议先 dry run：
+
+```bash
+roslaunch pharmacy_pkg test_move_to_waypoint.launch \
+  car_id:=1 target:=A dry_run:=true
+```
+
+确认打印的坐标和朝向无误后再正式发送：
+
+```bash
+roslaunch pharmacy_pkg test_move_to_waypoint.launch car_id:=1 target:=A
+roslaunch pharmacy_pkg test_move_to_waypoint.launch car_id:=1 target:=board1
+roslaunch pharmacy_pkg test_move_to_waypoint.launch car_id:=1 target:=lab1
+roslaunch pharmacy_pkg test_move_to_waypoint.launch car_id:=1 target:=home
+```
+
+支持的目标为 `A`、`B`、`C`、`lab1`～`lab4`、`board1`、`board2` 和 `home`。完整安全检查、点位记录方法和急停命令见 `README_waypoint_test.md`。
+
 ---
 
 ## 9. 主业务 launch 参数
@@ -318,16 +380,28 @@ roslaunch pharmacy_pkg base_camera_nav.launch
 
 `referee_only.launch` 另提供 `output` 和 `respawn_referee`；主业务节点也分别有 respawn 参数。导航状态机默认不自动重启，视觉和双车通信默认自动重启。
 
+航点测试 launch 参数：
+
+| 参数 | 默认值 | 说明 |
+|---|---:|---|
+| `car_id` | `1` | 决定使用哪辆车的 `home_pose` |
+| `target` | `A` | 测试目标名称 |
+| `timeout_sec` | `60` | 等待导航完成的最大时间 |
+| `wait_server_sec` | `30` | 等待 move_base 服务的时间 |
+| `clear_costmaps` | `true` | 发送目标前是否清除代价地图 |
+| `dry_run` | `false` | 只显示目标，不让小车运动 |
+
 ---
 
 ## 10. 建议的上车验证顺序
 
 1. **静态检查**：确认两车 `CAR_ID`、IP、端口、航点、资源路径和板二强制调试值。
-2. **基础系统**：检查 `/odometry/filtered`、`/camera/rgb/image_raw`、move_base 和清代价地图服务。
-3. **视觉独测**：暂不启动导航状态机，手动发布 `/nav_state` 为 10 或 13，观察识别结果。
-4. **双车通信独测**：两车只启动 `tcp_link_v2.py`，发布测试 `round_done`，确认对车收到 `peer_done`。
-5. **裁判通信独测**：单独启动 `referee_only.launch`，确认 JSON 中 id、坐标、速度和状态正确。
-6. **低速全流程**：先验证车 1 一轮，再验证车 2收到令牌与共享板一结果，最后双车循环。
+2. **基础系统**：检查 `/odometry/filtered`、`/tf`、`/camera/rgb/image_raw`、move_base 和清代价地图服务。
+3. **航点独测**：使用 `test_move_to_waypoint.launch` 先 dry run，再逐个验证 A/B/C、两块识别板、四个化验窗口和两车起点。
+4. **视觉独测**：暂不启动导航状态机，手动发布 `/nav_state` 为 10 或 13，观察识别结果。
+5. **双车通信独测**：两车只启动 `tcp_link_v2.py`，发布测试 `round_done`，确认对车收到 `peer_done`。
+6. **裁判通信独测**：单独启动 `referee_only.launch`，确认速度来自里程计、坐标来自 `map` TF，并检查 JSON 中 id、任务和 CV 字段。
+7. **低速全流程**：先验证车 1 一轮，再验证车 2收到令牌与共享板一结果，最后双车循环。
 
 常用观察命令：
 
@@ -355,7 +429,7 @@ rostopic pub /dual_car/round_done std_msgs/Int32MultiArray \
 
 ## 11. 已知边界
 
-- 本目录尚未提供 Catkin 元数据、自动化测试和专用调试包，部署依赖已有 `pharmacy_pkg`。
+- 本目录尚未提供 Catkin 元数据和自动化测试，部署依赖已有 `pharmacy_pkg`；目前已有单航点测试工具，但还不是独立调试功能包。
 - 配置集中在 Python 字典，修改后要重启相关节点；不像 `pharmacy_mplus0` 那样按视觉、导航、TCP 分为多个 YAML。
 - 状态机在构造函数中直接进入长期循环，主要通过 ROS 日志现场诊断。
 - 板一共享只配置为车 2使用车 1结果，不是双向对等任务分配。

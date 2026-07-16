@@ -1,0 +1,64 @@
+# 比赛流程、状态机和双车策略。所有数值均等价迁移自 dual_car_config.py。
+
+nav:
+  state_machine_rate_hz: 5
+  wait_result_rate_hz: 10
+  move_timeout_sec: 30
+  board1_wait_timeout_sec: 0
+  board2_wait_timeout_sec: 0
+  move_base_wait_server_sec: 60
+  pickup_task_hold_sec: 1.1
+  lab_task_hold_sec: 1.1
+  post_clear_costmap_sleep_sec: 0.5
+  home_arrive_sleep_sec: 0.1
+  cv_publish_repeat: 3
+  cv_publish_interval_sec: 0.05
+  dual_publish_repeat: 1
+  dual_publish_interval_sec: 0.10
+
+cars:
+  1:
+    car_id: 1
+    peer_id: 2
+    start_active: true
+    use_peer_board1_result: false
+  2:
+    car_id: 2
+    peer_id: 1
+    start_active: false
+    use_peer_board1_result: true
+
+lab_info:
+  3:
+    real_window: 4
+    sample_name: "血浆"
+    pickup_audio_prefix: "xuejiang"
+    delivery_audio_prefix: "jisu"
+    lab_name: "激素检验窗口"
+  2:
+    real_window: 3
+    sample_name: "组织"
+    pickup_audio_prefix: "zuzhi"
+    delivery_audio_prefix: "mianyi"
+    lab_name: "免疫检验窗口"
+  1:
+    real_window: 2
+    sample_name: "唾液"
+    pickup_audio_prefix: "tuoye"
+    delivery_audio_prefix: "tiye"
+    lab_name: "体液检验窗口"
+  0:
+    real_window: 1
+    sample_name: "静脉血"
+    pickup_audio_prefix: "jingmaixue"
+    delivery_audio_prefix: "xuechanggui"
+    lab_name: "血常规检验窗口"
+
+window_log_name:
+  A: "a"
+  B: "b"
+  C: "c"
+  AB: "a、b"
+  AC: "a、c"
+  BC: "b、c"
+  ABC: "a、b、c"

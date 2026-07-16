@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- 全部比赛业务节点；基础导航和摄像头由 base_camera_nav.launch 启动。 -->
+
+  <arg name="car_id" default="1" doc="车辆编号：1 或 2"/>
+  <arg name="output" default="screen" doc="节点日志输出：screen 或 log"/>
+
+  <arg name="start_dual_tcp" default="true" doc="启动双车 TCP 通信节点"/>
+  <arg name="start_detect" default="true" doc="启动视觉识别节点"/>
+  <arg name="start_nav_pharmacy" default="true" doc="启动药房导航状态机节点"/>
+  <arg name="start_referee" default="true" doc="启动裁判通信节点"/>
+
+  <arg name="respawn_comm" default="true"/>
+  <arg name="respawn_detect" default="true"/>
+  <arg name="respawn_nav_pharmacy" default="false"/>
+  <arg name="respawn_referee" default="true"/>
+
+  <arg name="detect_start_delay" default="3" doc="视觉识别节点延时启动秒数"/>
+  <arg name="nav_start_delay" default="6" doc="药房状态机延时启动秒数"/>
+
+  <arg name="dual_publish_repeat" default="3"/>
+  <arg name="dual_publish_interval" default="0.10"/>
+
+  <node if="$(arg start_dual_tcp)"
+        name="dual_car_tcp_link"
+        pkg="pharmacy_mplus0"
+        type="dual_car_link.py"
+        output="$(arg output)"
+        respawn="$(arg respawn_comm)">
+    <env name="CAR_ID" value="$(arg car_id)"/>
+  </node>
+
+  <node if="$(arg start_referee)"
+        name="referee_client_node"
+        pkg="pharmacy_mplus0"
+        type="referee_reporter.py"
+        output="$(arg output)"
+        respawn="$(arg respawn_referee)">
+    <env name="CAR_ID" value="$(arg car_id)"/>
+  </node>
+
+  <node if="$(arg start_detect)"
+        name="detect_abc"
+        pkg="pharmacy_mplus0"
+        type="vision_node.py"
+        output="$(arg output)"
+        respawn="$(arg respawn_detect)"
+        launch-prefix="bash -c 'sleep $(arg detect_start_delay); exec &quot;$@&quot;' _">
+    <env name="CAR_ID" value="$(arg car_id)"/>
+  </node>
+
+  <node if="$(arg start_nav_pharmacy)"
+        name="nav_pharmacy"
+        pkg="pharmacy_mplus0"
+        type="main_controller.py"
+        output="$(arg output)"
+        respawn="$(arg respawn_nav_pharmacy)"
+        launch-prefix="bash -c 'sleep $(arg nav_start_delay); exec &quot;$@&quot;' _">
+    <env name="CAR_ID" value="$(arg car_id)"/>
+    <param name="dual_publish_repeat" value="$(arg dual_publish_repeat)"/>
+    <param name="dual_publish_interval" value="$(arg dual_publish_interval)"/>
+  </node>
+</launch>

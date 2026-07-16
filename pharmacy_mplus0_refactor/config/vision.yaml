@@ -1,0 +1,52 @@
+# 板一、板二和图像输入参数。保留全部当前默认值。
+
+board1:
+  approx_poly_dp_epsilon: 0.02
+  wh_rate: 0.4
+  min_area: 500
+  max_area: 20000
+  min_center_distance: 20
+  locator_min: 44
+  locator_max: 60
+  result_min: 20
+  stable_frames: 3
+  publish_all_text: true
+  share_all_text_topic: "/board1_all_text"
+  peer_all_text_topic: "/dual_car/peer_board1_all_text"
+  window_detect_enable: true
+  window_min_area: 2500
+  window_max_area: 80000
+  window_square_wh_rate: 0.45
+  window_dedup_distance: 55
+  window_inner_margin_rate: 0.16
+  window_warp_size: 240
+  window_complete_from_three: true
+  direct_decode_enable: false
+  direct_min_qr_count: 4
+  direct_dedup_distance: 45
+
+board2:
+  match_threshold: 0.68
+  stable_frames: 2
+  score_margin: 0.08
+  publish_interval: 0.5
+  roi: [0.0, 0.0, 1.0, 1.0]
+  template_scales: [0.85, 0.95, 1.0, 1.05, 1.15]
+  force_label_for_debug: "free"
+  force_score_for_debug: 1.0
+
+detect:
+  frame_rotate_angle: 0
+  drop_frame_count: 2
+  limit_rate_hz: 6
+  idle_grab_sleep_sec: 0.1
+  camera_reconnect_sleep_sec: 1.0
+  image_source: "ros_topic"
+  camera_topic: "/camera/rgb/image_raw"
+  camera_fallback_to_http: true
+  camera_max_age_sec: 0.5
+  ros_image_buff_size: 16777216
+
+camera_url:
+  1: "http://192.168.124.3:8080/stream?topic=/camera/rgb/image_raw"
+  2: "http://192.168.124.9:8080/stream?topic=/camera/rgb/image_raw"
