@@ -4,24 +4,18 @@
 # 保留 .gitignore
 !/.gitignore
 
-# 只同步以下五个项目目录
+# 只同步以下四个项目目录
 !/dual_car_refactor/
 !/dual_car_refactor/**
-
-!/pharmacy_mplus0_refactor/
-!/pharmacy_mplus0_refactor/**
 
 !/pharmacy_mplus0/
 !/pharmacy_mplus0/**
 
-!/pharmacy_mplus0_debug/
-!/pharmacy_mplus0_debug/**
+!/pharmacy_pkg/
+!/pharmacy_pkg/**
 
 !/robot_navigation/
 !/robot_navigation/**
-
-!/pharmacy_pkg/
-!/pharmacy_pkg/**
 
 
 # ROS / Catkin 编译产物
