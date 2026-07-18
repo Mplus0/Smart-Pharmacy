@@ -1,0 +1,26 @@
+board:
+  warp_width: 480
+  warp_height: 320
+roi:
+  status:
+    pixel_xywh:
+    - 229
+    - 91
+    - 108
+    - 59
+    normalized_xyxy:
+    - 0.485417
+    - 0.290625
+    - 0.69375
+    - 0.46875
+  number:
+    pixel_xywh:
+    - 258
+    - 150
+    - 57
+    - 52
+    normalized_xyxy:
+    - 0.5375
+    - 0.46875
+    - 0.65625
+    - 0.63125

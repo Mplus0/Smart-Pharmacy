@@ -5,7 +5,7 @@ vision_node.py
 
 视觉识别节点：
 1. 识别板一：定位二维码板，读取四个区域二维码，选择最优方案并发布 /cam_return；
-2. 识别板二：通过模板匹配识别空闲/忙碌和等待时间，发布 /board2_return。
+2. 识别板二：通过两阶段 YOLO 分类识别空闲/忙碌和等待时间，发布 /board2_return。
 
 备注：新增图像识别的判断算法，防止一直识别造成卡顿。订阅导航状态current_nav_state，只有在对应状态才进行图像处理，其他时间休眠等待。
     新增识别策略，减少摄像头的重复读取和图像处理，避免不必要的计算和卡顿。
@@ -32,6 +32,7 @@ from sensor_msgs.msg import CompressedImage, Image
 from std_msgs.msg import Int32MultiArray, Int32, String
 
 from pharmacy_mplus0.config import COMMON, get_car_config, get_car_id
+from pharmacy_mplus0.board2_yolo import Board2YoloClassifier
 from pharmacy_mplus0.task_logic import normalize_all_text, safe_to_str, select_board1_from_all_text
 
 os.environ["LANG"] = "zh_CN.UTF-8"
@@ -96,16 +97,6 @@ CAMERA_FALLBACK_TO_HTTP = DETECT_CFG.get("camera_fallback_to_http", True)
 CAMERA_MAX_AGE_SEC = DETECT_CFG.get("camera_max_age_sec", 0.5)
 ROS_IMAGE_BUFF_SIZE = DETECT_CFG.get("ros_image_buff_size", 2 ** 24)
 
-BOARD2_TEMPLATE_DIR = COMMON["paths"]["board2_template_dir"]
-BOARD2_MATCH_THRESHOLD = BOARD2_CFG["match_threshold"]
-BOARD2_STABLE_FRAMES = BOARD2_CFG["stable_frames"]
-BOARD2_SCORE_MARGIN = BOARD2_CFG["score_margin"]
-BOARD2_PUBLISH_INTERVAL = BOARD2_CFG["publish_interval"]
-BOARD2_ROI = BOARD2_CFG["roi"]
-BOARD2_TEMPLATE_SCALES = BOARD2_CFG["template_scales"]
-BOARD2_FORCE_LABEL_FOR_DEBUG = BOARD2_CFG.get("force_label_for_debug")
-BOARD2_FORCE_SCORE_FOR_DEBUG = BOARD2_CFG.get("force_score_for_debug", 1.0)
-
 # =========================
 # 全局运行变量
 # =========================
@@ -113,14 +104,11 @@ BOARD2_FORCE_SCORE_FOR_DEBUG = BOARD2_CFG.get("force_score_for_debug", 1.0)
 pub_flag = None
 pub_board2 = None
 pub_board1_all_text = None
-board2_templates = {}
+board2_classifier = None
 board1_history = deque(maxlen=BOARD1_STABLE_FRAMES)
-board2_history = deque(maxlen=BOARD2_STABLE_FRAMES)
 board1_published = False
 board2_published = False
 board1_all_text_seq = 0
-last_board2_publish_time = 0.0
-last_board2_publish_label = None
 previous_nav_state = None
 current_nav_state = STATE_GO_TO_BOARD1
 
@@ -161,138 +149,13 @@ def rotate_frame(frame, angle):
 
 
 # =========================
-# 识别板二：模板匹配
+# 识别板二：YOLO 结果消息
 # =========================
-
-def preprocess_board2_img(img):
-    """
-    识别板二模板匹配预处理：
-    1. 灰度化；
-    2. 高斯滤波；
-    3. Otsu 二值化。
-    """
-    if len(img.shape) == 3:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    else:
-        gray = img.copy()
-
-    gray = cv2.GaussianBlur(gray, (3, 3), 0)
-    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    return binary
-
-
-def load_board2_templates():
-    """
-    加载识别板二模板。
-
-    模板命名：
-    - free.png
-    - busy_5.png ~ busy_10.png
-    """
-    templates = {}
-
-    template_files = {
-        "free": "free.png",
-        "busy_5": "busy_5.png",
-        "busy_6": "busy_6.png",
-        "busy_7": "busy_7.png",
-        "busy_8": "busy_8.png",
-        "busy_9": "busy_9.png",
-        "busy_10": "busy_10.png"
-    }
-
-    for label, filename in template_files.items():
-        path = os.path.join(BOARD2_TEMPLATE_DIR, filename)
-        img = cv2.imread(path)
-
-        if img is None:
-            rospy.logwarn("识别板二模板未找到: %s", path)
-            continue
-
-        templates[label] = preprocess_board2_img(img)
-
-    rospy.logwarn("识别板二模板加载完成，数量: %d", len(templates))
-    return templates
-
-
-def crop_board2_roi(frame):
-    """裁剪识别板二 ROI，当前默认全图。"""
-    h, w = frame.shape[:2]
-    x1_rate, y1_rate, x2_rate, y2_rate = BOARD2_ROI
-
-    x1 = int(w * x1_rate)
-    y1 = int(h * y1_rate)
-    x2 = int(w * x2_rate)
-    y2 = int(h * y2_rate)
-
-    return frame[y1:y2, x1:x2]
-
-
-def match_one_template(search_img, template_img):
-    """单模板多尺度匹配，返回最高匹配分数。"""
-    best_score = -1.0
-    sh, sw = search_img.shape[:2]
-
-    for scale in BOARD2_TEMPLATE_SCALES:
-        tw = int(template_img.shape[1] * scale)
-        th = int(template_img.shape[0] * scale)
-
-        if tw <= 10 or th <= 10:
-            continue
-        if tw >= sw or th >= sh:
-            continue
-
-        resized_template = cv2.resize(template_img, (tw, th))
-        result = cv2.matchTemplate(search_img, resized_template, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, _ = cv2.minMaxLoc(result)
-
-        if max_val > best_score:
-            best_score = max_val
-
-    return best_score
-
-
-def detect_board2_status(frame):
-    """检测识别板二状态，返回 label 和 score。"""
-    global board2_templates
-
-    if len(board2_templates) == 0:
-        return None, 0.0
-
-    roi = crop_board2_roi(frame)
-    search_img = preprocess_board2_img(roi)
-
-    scores = []
-    for label, template_img in board2_templates.items():
-        score = match_one_template(search_img, template_img)
-        scores.append((label, score))
-
-    if len(scores) == 0:
-        return None, 0.0
-
-    scores.sort(key=lambda x: x[1], reverse=True)
-    best_label, best_score = scores[0]
-
-    if len(scores) >= 2:
-        second_label, second_score = scores[1]
-    else:
-        second_label, second_score = None, -1.0
-
-    if (best_score >= BOARD2_MATCH_THRESHOLD and
-            (best_score - second_score) >= BOARD2_SCORE_MARGIN):
-        return best_label, best_score
-
-    rospy.loginfo_throttle(
-        1.0,
-        "识别板二匹配不稳定: best=%s %.3f second=%s %.3f",
-        best_label, best_score, second_label, second_score
-    )
-    return None, best_score
 
 
 def board2_label_to_msg(label):
     """
-    将模板标签转换为 /board2_return 消息。
+    将 YOLO 分类标签转换为 /board2_return 消息。
 
     msg.data = [state, wait_time]
     state = 0 表示空闲；state = 1 表示忙碌。
@@ -312,6 +175,7 @@ def board2_label_to_msg(label):
             return None
 
     return None
+
 
 def read_latest_frame(cap, drop_count=DROP_FRAME_COUNT):
     '''防止旧帧影响识别'''
@@ -452,11 +316,9 @@ def nav_state_cb(msg):
     global current_nav_state
     global previous_nav_state
     global board1_history
-    global board2_history
+    global board2_classifier
     global board1_published
     global board2_published
-    global last_board2_publish_time
-    global last_board2_publish_label
 
     previous_nav_state = current_nav_state
     current_nav_state = msg.data
@@ -467,11 +329,10 @@ def nav_state_cb(msg):
         rospy.loginfo("进入识别板一状态，清空历史缓存，允许发布一次识别结果")
 
     if previous_nav_state != STATE_BOARD2_RECOGNIZING and current_nav_state == STATE_BOARD2_RECOGNIZING:
-        board2_history.clear()
+        if board2_classifier is not None:
+            board2_classifier.reset()
         board2_published = False
-        last_board2_publish_time = 0.0
-        last_board2_publish_label = None
-        rospy.loginfo("进入识别板二状态，清空历史缓存，允许发布一次识别结果")
+        rospy.loginfo("进入识别板二状态，清空 YOLO 概率缓存，允许发布一次识别结果")
 
 
 
@@ -796,10 +657,8 @@ def stable_publish_board1(all_data):
 
     return msg.data
 
-def stable_publish_board2(label, score):
-    """多帧稳定后发布识别板二结果，避免单帧误识别。"""
-    global last_board2_publish_time
-    global last_board2_publish_label
+def publish_board2_result(label, score):
+    """发布由 YOLO 概率平滑器确认的板二结果。"""
     global pub_board2
     global board2_published
 
@@ -807,38 +666,18 @@ def stable_publish_board2(label, score):
         return None
 
     if label is None:
-        board2_history.clear()
-        return None
-
-    board2_history.append(label)
-
-    if len(board2_history) < BOARD2_STABLE_FRAMES:
-        rospy.loginfo("识别板二稳定计数: %d/%d",
-                      len(board2_history), BOARD2_STABLE_FRAMES)
-        return None
-
-    if len(set(board2_history)) != 1:
-        rospy.logwarn("识别板二连续结果不一致，继续等待稳定: %s",
-                      list(board2_history))
-        return None
-
-    now = time.time()
-    if now - last_board2_publish_time < BOARD2_PUBLISH_INTERVAL:
         return None
 
     msg = board2_label_to_msg(label)
     if msg is None:
-        board2_history.clear()
+        rospy.logerr("识别板二 YOLO 返回无法发布的标签: %s", label)
         return None
 
     pub_board2.publish(msg)
     board2_published = True
 
-    last_board2_publish_time = now
-    last_board2_publish_label = label
-
-    rospy.logwarn("识别板二连续 %d 次稳定，正式发布: %s, score=%.3f, publish=%s",
-                  BOARD2_STABLE_FRAMES, label, score, msg.data)
+    rospy.logwarn("识别板二 YOLO 正式发布: %s, confidence=%.3f, publish=%s",
+                  label, score, msg.data)
 
     return msg.data
 
@@ -1269,11 +1108,17 @@ def init_ros_node_and_publishers():
 
 def main():
     """程序入口。"""
-    global board2_templates
+    global board2_classifier
 
     init_ros_node_and_publishers()
     rate = rospy.Rate(LIMIT_RATE_HZ)
-    board2_templates = load_board2_templates()
+
+    board2_classifier = Board2YoloClassifier(BOARD2_CFG)
+    rospy.logwarn(
+        "识别板二 YOLO 模型已加载：status=%s number=%s",
+        BOARD2_CFG["status_model_path"],
+        BOARD2_CFG["number_model_path"]
+    )
 
     cap = None
     if IMAGE_SOURCE not in ["ros_topic", "ros_image", "ros_compressed"] or CAMERA_FALLBACK_TO_HTTP:
@@ -1303,7 +1148,6 @@ def main():
             rospy.sleep(IDLE_GRAB_SLEEP_SEC)
             continue
 
-
         hx, frame, frame_source = read_frame_from_configured_source(cap)
 
         if (not hx) or (frame is None):
@@ -1326,14 +1170,21 @@ def main():
         elif current_nav_state == STATE_BOARD2_RECOGNIZING:
             rospy.loginfo_throttle(1.0, "到达识别板二，开始识别")
             frame = rotate_frame(frame, FRAME_ROTATE_ANGLE)
-            if BOARD2_FORCE_LABEL_FOR_DEBUG:
-                rospy.logwarn_throttle(1.0, "识别板二使用强制调试结果: %s", BOARD2_FORCE_LABEL_FOR_DEBUG)
-                board2_label = BOARD2_FORCE_LABEL_FOR_DEBUG
-                board2_score = BOARD2_FORCE_SCORE_FOR_DEBUG
-            else:
-                board2_label, board2_score = detect_board2_status(frame)
+            try:
+                board2_label, board2_score = board2_classifier.detect(frame)
+            except Exception as exc:
+                board2_classifier.reset()
+                rospy.logerr_throttle(1.0, "识别板二 YOLO 推理失败: %s", exc)
+                board2_label = None
+                board2_score = 0.0
 
-            board2_publish_data = stable_publish_board2(board2_label, board2_score)
+            if board2_label is None:
+                rospy.loginfo_throttle(
+                    1.0,
+                    "识别板二正在等待黑框对齐或累计 YOLO 平滑帧"
+                )
+            else:
+                publish_board2_result(board2_label, board2_score)
 
         else:
             rospy.sleep(IDLE_GRAB_SLEEP_SEC)

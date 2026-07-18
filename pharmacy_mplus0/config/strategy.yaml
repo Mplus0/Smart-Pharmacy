@@ -9,6 +9,7 @@ nav:
   move_base_wait_server_sec: 60
   pickup_task_hold_sec: 1.1
   lab_task_hold_sec: 1.1
+  clear_costmaps_on_arrival: false
   post_clear_costmap_sleep_sec: 0.5
   home_arrive_sleep_sec: 0.1
   cv_publish_repeat: 3

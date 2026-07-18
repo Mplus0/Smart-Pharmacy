@@ -31,7 +31,7 @@ import rospy
 import actionlib
 from actionlib_msgs.msg import *
 from geometry_msgs.msg import Pose, Point, Quaternion, Twist
-from std_msgs.msg import String, Int32, Int32MultiArray
+from std_msgs.msg import String, Int32, Int32MultiArray, Bool
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from tf.transformations import quaternion_from_euler
 from visualization_msgs.msg import Marker
@@ -164,6 +164,9 @@ class MoveBaseSquare(object):
         self.pub_referee_cv1 = rospy.Publisher(TOPICS["referee_cv1"], String, queue_size=10, latch=True)
         self.pub_referee_cv2 = rospy.Publisher(TOPICS["referee_cv2"], String, queue_size=10, latch=True)
         self.pub_nav_state = rospy.Publisher(TOPICS["nav_state"], Int32, queue_size=10, latch=True)
+        self.pub_referee_active = rospy.Publisher(
+            TOPICS["referee_active"], Bool, queue_size=10, latch=True
+        )
 
         # [DUAL-ADD] 双车本地 ROS 话题。
         # /dual_car/round_done：本车进入化验区/到达化验窗口后，释放另一辆车出发。
@@ -192,6 +195,9 @@ class MoveBaseSquare(object):
             queue_size=10
         )
 
+        # latched 发布初始裁判上报权：
+        # car1 默认拥有任务令牌，car2 默认等待。
+        self.publish_referee_active(self.have_turn, "startup")
         rospy.sleep(0.5)
 
     def init_move_base_client(self):
@@ -230,6 +236,7 @@ class MoveBaseSquare(object):
                                    self.car_id, self.peer_id)
             self.count = STATE_WAIT_TURN
             self.pub_nav_state.publish(self.count)
+            self.publish_referee_active(False, "go_to_board1_without_turn")
             return
 
         # [DUAL-ADD] 新一轮开始，允许本轮在进入化验区后释放一次 done。
@@ -253,7 +260,7 @@ class MoveBaseSquare(object):
             self.board1_received = False #重置识别版一接受状态
             self.count = STATE_BOARD1_RECOGNIZING
             self.pub_nav_state.publish(self.count)
-            self.clear_costmaps_service()
+            self.clear_costmaps_after_arrival()
             # 等待识别板一真正识别成功
             if self.wait_for_board1_result():
                 rospy.loginfo("识别板一识别成功，准备前往取样窗口")
@@ -273,9 +280,8 @@ class MoveBaseSquare(object):
         if self.windows_C == 1 and not self.pickup_C_done:
             goal = self.make_goal(self.waypoints[0])
             if self.move(goal) is True:
-                self.arrive_and_leave_pickup_window("C")
-                if self.windows_A == 0 and self.windows_B == 0:
-                    self.announce_pickup_result("C")
+                announce_code = "C" if self.windows_A == 0 and self.windows_B == 0 else None
+                self.arrive_and_leave_pickup_window("C", announce_code)
             else:
                 rospy.logerr("前往 C 窗口失败，重新尝试")
                 return
@@ -283,12 +289,12 @@ class MoveBaseSquare(object):
         if self.windows_A == 1 and not self.pickup_A_done:
             goal = self.make_goal(self.waypoints[1])
             if self.move(goal) is True:
-                self.arrive_and_leave_pickup_window("A")
+                announce_code = None
                 if self.windows_C == 0 and self.windows_B == 0:
-                    self.announce_pickup_result("A")
+                    announce_code = "A"
                 elif self.windows_C == 1 and self.windows_B == 0:
-                    self.announce_pickup_result("AC")
-                self.clear_costmaps_service()
+                    announce_code = "AC"
+                self.arrive_and_leave_pickup_window("A", announce_code)
             else:
                 rospy.logerr("前往 A 窗口失败，重新尝试")
                 return
@@ -296,15 +302,15 @@ class MoveBaseSquare(object):
         if self.windows_B == 1 and not self.pickup_B_done:
             goal = self.make_goal(self.waypoints[2])
             if self.move(goal) is True:
-                self.arrive_and_leave_pickup_window("B")
                 if self.windows_C == 1 and self.windows_A == 1:
-                    self.announce_pickup_result("ABC")
+                    announce_code = "ABC"
                 elif self.windows_C == 0 and self.windows_A == 1:
-                    self.announce_pickup_result("AB")
+                    announce_code = "AB"
                 elif self.windows_C == 1 and self.windows_A == 0:
-                    self.announce_pickup_result("BC")
-                elif self.windows_C == 0 and self.windows_A == 0:
-                    self.announce_pickup_result("B")
+                    announce_code = "BC"
+                else:
+                    announce_code = "B"
+                self.arrive_and_leave_pickup_window("B", announce_code)
             else:
                 rospy.logerr("前往 B 窗口失败，重新尝试")
                 return
@@ -323,7 +329,7 @@ class MoveBaseSquare(object):
             rospy.loginfo("已经到达识别板2！正在识别！")
             self.count = STATE_BOARD2_RECOGNIZING
             self.pub_nav_state.publish(self.count)
-            self.clear_costmaps_service()
+            self.clear_costmaps_after_arrival()
             if self.wait_for_board2_result():
                 rospy.loginfo("识别板二识别成功，结果为: %s", self.board2_result)
 
@@ -350,13 +356,12 @@ class MoveBaseSquare(object):
         goal = self.make_goal(self.waypoints[6 - self.windows_1234])
         if self.move(goal) is True:
             real_window_str = str(self.windows_1234 + 1)
+            self.announce_delivery_result()
             self.pub_referee_task.publish(real_window_str)
             rospy.loginfo("已经到达化验室" + real_window_str + "窗口！")
-
-            self.clear_costmaps_service()
+            self.clear_costmaps_after_arrival()
             rospy.sleep(NAV_CFG["lab_task_hold_sec"])
             self.pub_referee_task.publish("R")
-            self.announce_delivery_result()
 
             # [DUAL-MOD-STATE15] 进入状态15的瞬间释放令牌。
             # 也就是本车完成化验窗口停留和播报，准备返回起点时，才允许另一辆车出发。
@@ -377,7 +382,7 @@ class MoveBaseSquare(object):
 
         if self.move(goal) is True:
             rospy.loginfo("已经回到原点，准备前往识别板一！")
-            self.clear_costmaps_service()
+            self.clear_costmaps_after_arrival()
             rospy.sleep(NAV_CFG["home_arrive_sleep_sec"])
 
             # [DUAL-MOD] 原来这里直接进入下一轮 STATE_GO_TO_BOARD1。
@@ -398,6 +403,17 @@ class MoveBaseSquare(object):
             rospy.logerr("返回原点失败，重新尝试返回原点")
             return
 
+
+    def publish_referee_active(self, active, reason=""):
+        """发布本车是否拥有裁判 TCP 上报权。"""
+        active = bool(active)
+        self.pub_referee_active.publish(Bool(data=active))
+        rospy.loginfo(
+            "[裁判上报] car%s active=%s reason=%s",
+            self.car_id,
+            active,
+            reason
+        )
 
     def handle_wait_turn(self):
         """[DUAL-ADD] 状态 8：等待另一辆车释放令牌。"""
@@ -427,6 +443,11 @@ class MoveBaseSquare(object):
             rospy.loginfo_throttle(2.0, "[双车] 本轮 done 已发布过，忽略重复发布请求")
             return
 
+        # 必须先停止本车裁判上报，再向下一辆车发送 done。
+        # 对车收到 done 后才会开启上报，避免交接瞬间两车同时连接裁判软件。
+        self.have_turn = False
+        self.publish_referee_active(False, "release_turn:%s" % reason)
+
         self.dual_round_seq += 1
         msg = Int32MultiArray()
         msg.data = [self.car_id, self.dual_round_seq]
@@ -443,9 +464,9 @@ class MoveBaseSquare(object):
             self.pub_round_done.publish(msg)
             rospy.sleep(self.dual_publish_interval)
 
-        # 本车已经把本轮出发令牌交给对方，但仍继续完成当前配送和返回起点。
+        # 本车已经把本轮任务令牌交给对方，但仍继续返回起点。
+        # 本车此时继续导航，但不再向裁判软件发送。
         self.turn_released_this_round = True
-        self.have_turn = False
 
     def peer_done_callback(self, msg):
         """[DUAL-ADD] 收到通信节点转发的另一辆车 done。"""
@@ -501,6 +522,10 @@ class MoveBaseSquare(object):
         self.peer_done_pending = False
         self.have_turn = True
         self.turn_released_this_round = False
+
+        # 获得新一轮任务令牌后，才允许本车连接并向裁判软件发送。
+        self.publish_referee_active(True, "received_peer_done")
+
         self.count = STATE_GO_TO_BOARD1
         self.pub_nav_state.publish(self.count)
 
@@ -679,10 +704,20 @@ class MoveBaseSquare(object):
         rospy.sleep(NAV_CFG["post_clear_costmap_sleep_sec"])
         return False
 
-    def arrive_and_leave_pickup_window(self, window_name):
-        """到达取样窗口后，向裁判系统发布到达和离开状态。"""
+    def clear_costmaps_after_arrival(self):
+        """根据配置决定是否在成功到达目标点后清除代价地图。"""
+        if NAV_CFG["clear_costmaps_on_arrival"]:
+            self.clear_costmaps_service()
+
+    def arrive_and_leave_pickup_window(self, window_name, announce_code=None):
+        """到达取样窗口后立即播报，并在播报期间完成停留等待。"""
+
+        # 语音通过 Popen 异步启动，会与后面的清图和 1.1 秒停留同时进行。
+        if announce_code is not None:
+            self.announce_pickup_result(announce_code)
         self.pub_referee_task.publish(window_name)
-        self.clear_costmaps_service()
+
+        self.clear_costmaps_after_arrival()
         rospy.sleep(NAV_CFG["pickup_task_hold_sec"])
         self.pub_referee_task.publish("R")
 

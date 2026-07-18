@@ -8,7 +8,7 @@
 | 旧配置路径 | 新配置位置 | 加载后的兼容路径 |
 |---|---|---|
 | `COMMON["paths"]["audio_dir"]` | `config.py` 使用包路径定位 `resources/audio` | `COMMON["paths"]["audio_dir"]` |
-| `COMMON["paths"]["board2_template_dir"]` | `config.py` 使用包路径定位 `resources/board2` | `COMMON["paths"]["board2_template_dir"]` |
+| 板二模型目录 | `config.py` 使用包路径定位 `models/board2` | `COMMON["paths"]["board2_model_dir"]` |
 | `COMMON["topics"][*]` | `communication.yaml: topics.*` | `COMMON["topics"][*]` |
 | `COMMON["states"][*]` | `config.py: STATES` | `COMMON["states"][*]` |
 | `COMMON["board1"][*]` | `vision.yaml: board1.*` | `COMMON["board1"][*]` |
@@ -53,9 +53,9 @@
 
 ## 类型保持
 
-- `waypoints.*`、`home_pose.*` 和 `board2.roi` 在 YAML 中使用序列保存，加载后恢复为 tuple。
-- `euler_angles` 和 `template_scales` 加载后保持 list。
+- `waypoints.*`、`home_pose.*`、`board2.status_roi` 和 `board2.number_roi` 在 YAML 中使用序列保存，加载后恢复为 tuple。
+- `euler_angles` 和板二类别列表加载后保持 list。
 - YAML 的数字车号和 `lab_info` 窗口编号保持 int 键。
 - `shared_token: null` 加载后保持 `None`。
 - Python 2 下，YAML 产生的 unicode 字符串递归转换为 UTF-8 `str`，与旧源码的 UTF-8 字符串字面量类型保持一致。
-- 两个资源路径只改变同一资源的定位方式：由旧业务包绝对路径改为当前 ROS 包内目录，不改变模板或音频文件名。
+- 音频与板二 ONNX 模型都由当前 ROS 包内路径定位，不依赖旧业务包或训练留档目录。

@@ -1,0 +1,52 @@
+{
+  "model": "yolo11n-cls.pt",
+  "dataset": "results/classification_dataset/number",
+  "class_names": [
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10"
+  ],
+  "seed": 57,
+  "image_size": 224,
+  "sample_counts": {
+    "train": {
+      "5": 40,
+      "6": 40,
+      "7": 40,
+      "8": 40,
+      "9": 40,
+      "10": 40
+    },
+    "val": {
+      "5": 10,
+      "6": 10,
+      "7": 10,
+      "8": 10,
+      "9": 10,
+      "10": 10
+    },
+    "test": {
+      "5": 10,
+      "6": 10,
+      "7": 10,
+      "8": 10,
+      "9": 10,
+      "10": 10
+    }
+  },
+  "best_model": "/datas/Mplus0/project/yolo_train/smart-pharmacy-board2/results/number_classifier/number_yolo11n_cls_seed57/weights/best.pt",
+  "test_top1_accuracy": 1.0,
+  "test_top5_accuracy": 1.0,
+  "test_balanced_accuracy": 1.0,
+  "test_recall_per_class": {
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0
+  }
+}

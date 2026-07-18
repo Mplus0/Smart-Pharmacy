@@ -1,256 +1,229 @@
 # pharmacy_mplus0
 
-智慧药房双车比赛业务 ROS 包。本目录是从 `dual_car_refactor` 等价迁移得到的规范化版本，重构仅调整 Catkin 包结构、配置组织、资源定位、脚本名称和 launch 入口，不修改识别算法、导航状态机、双车策略或通信协议。
+`pharmacy_mplus0` 是智慧药房双车协同比赛的 ROS1 主功能包，负责比赛任务状态机、视觉识别、导航调度、双车协同、裁判系统通信和语音提示。同一套代码通过车辆编号区分车 1 与车 2，并使用 ROS 话题和 TCP 通信完成两车之间的任务交接。
 
-## 1. 部署名称
+## 1. 系统组成
 
-当前开发目录名是 `pharmacy_mplus0_refactor`。复制到正式 Ubuntu 18.04 小车时，应放置为：
+功能包由五个运行节点和三个共享 Python 模块组成。
 
-```text
-~/robot_ws/src/pharmacy_mplus0/
-```
-
-以下三个名称均固定为 `pharmacy_mplus0`：
-
-- `package.xml` 中的 ROS 包名；
-- Python 包名；
-- `roslaunch` 和 `rosrun` 使用的包名。
-
-同一 Catkin 工作空间内不能同时存在另一个名为 `pharmacy_mplus0` 的 ROS 包。切换新包前，需要先由部署人员处理旧同名包。
-
-## 2. 目录结构
-
-```text
-pharmacy_mplus0/
-├── CMakeLists.txt
-├── package.xml
-├── setup.py
-├── README.md
-├── STRUCTURE_REFACTOR_PLAN.md
-├── config/
-│   ├── strategy.yaml
-│   ├── waypoints.yaml
-│   ├── vision.yaml
-│   └── communication.yaml
-├── launch/
-│   ├── race_bringup.launch
-│   ├── base_camera_nav.launch
-│   ├── main.launch
-│   ├── vision.launch
-│   └── test_navigation.launch
-├── scripts/
-│   ├── vision_node.py
-│   ├── main_controller.py
-│   ├── dual_car_link.py
-│   ├── referee_reporter.py
-│   └── waypoint_tester.py
-├── src/pharmacy_mplus0/
-│   ├── __init__.py
-│   ├── config.py
-│   └── task_logic.py
-├── resources/
-│   ├── audio/
-│   └── board2/
-├── docs/
-└── test/
-```
-
-## 3. 运行依赖
-
-正式环境为 ROS1 Melodic / Ubuntu 18.04 / Python 2.7。ROS 依赖以 `package.xml` 为准，主要包括：
-
-- `rospy`、`roslib`、`std_msgs`、`sensor_msgs`、`geometry_msgs`、`nav_msgs`、`std_srvs`；
-- `actionlib`、`actionlib_msgs`、`move_base_msgs`、`tf`、`visualization_msgs`、`cv_bridge`；
-- 同级功能包 `robot_navigation`、`astra_camera`、`web_video_server`。
-
-视觉和音频还使用系统中已经安装的 OpenCV、NumPy、pyzbar/zbar、PyYAML、rospkg 和 SoX `play` 命令。本次重构不安装或升级依赖。
-
-## 4. 资源文件
-
-仓库当前没有正式小车上的板二模板和语音文件，两个资源目录仅含 `.gitkeep`。部署前必须从小车现有资源复制真实文件，不得生成替代文件或修改文件内容。
-
-板二模板放置于 `resources/board2/`，代码使用的文件名为：
-
-```text
-free.png
-busy_5.png
-busy_6.png
-busy_7.png
-busy_8.png
-busy_9.png
-busy_10.png
-```
-
-语音放置于 `resources/audio/`。实际文件名由主控现有拼接规则决定，包括：
-
-- `WAIT-0.wav`、`WAIT-5.wav`～`WAIT-10.wav`；
-- 取样语音前缀 `xuejiang`、`zuzhi`、`tuoye`、`jingmaixue` 加窗口组合；
-- 送样语音前缀 `jisu`、`mianyi`、`tiye`、`xuechanggui` 加样本数。
-
-资源通过 `rospkg` 定位当前包，不依赖用户名、工作空间绝对路径或其他智慧药房业务包。
-
-## 5. 配置
-
-| 文件 | 内容 |
+| 组件 | 主要职责 |
 |---|---|
-| `strategy.yaml` | 状态机时序、双车身份和行为、化验窗口与语音映射 |
-| `waypoints.yaml` | 航点、朝向索引和两车起点 |
-| `vision.yaml` | 板一、板二、图像输入和两车相机 URL |
-| `communication.yaml` | ROS 话题、裁判 TCP 和双车 TCP |
+| `main_controller.py` | 管理比赛状态机、目标导航、取送样流程、语音提示和双车任务令牌 |
+| `vision_node.py` | 识别板一二维码信息和板二空闲/忙碌状态 |
+| `dual_car_link.py` | 在 ROS 与双车 TCP 连接之间转发任务完成消息和板一完整识别结果 |
+| `referee_reporter.py` | 采集任务状态、视觉结果、速度和位置，并向裁判服务器发送数据 |
+| `waypoint_tester.py` | 读取统一航点配置并构造单目标导航任务 |
+| `config.py` | 加载 YAML 配置、车辆参数、状态编号和包内资源路径 |
+| `task_logic.py` | 处理板一结果标准化、任务选择和双车共享结果复用 |
+| `board2_yolo.py` | 完成板二定位、图像对齐、ROI 处理、ONNX 分类和概率平滑 |
 
-同一套代码通过 `CAR_ID=1` 或 `CAR_ID=2` 选择车辆配置。launch 的 `car_id` 参数会自动设置该环境变量。
+## 2. 总体工作流程
 
-当前默认值全部按迁移来源保留，其中包括：
+车 1 默认先执行任务，车 2 等待车 1 释放任务令牌。单车一轮任务的流程如下：
 
-- 板二 `force_label_for_debug: "free"`；
-- 板一、板二等待超时均为 0，即无限等待；
-- 双车模式在主控中固定开启；
-- 双车 token 为 null，来源 IP 检查开启。
+1. 前往识别板一并读取四个窗口的二维码信息。
+2. 根据二维码组合确定取样窗口、样本数量和异常窗口。
+3. 按 `C → A → B` 的固定顺序前往需要访问的取样窗口。
+4. 前往识别板二，判断化验窗口是否空闲；忙碌时按照识别结果等待 5～10 秒。
+5. 前往选定的化验窗口完成送样。
+6. 返回本车起点，并通过双车通信释放下一轮任务令牌。
 
-这些值可能属于现场调试设置，但本次结构重构没有擅自修正。正式比赛前应由负责人按实际需求单独确认。
+车 2 优先复用车 1 发布的板一完整结果，在排除车 1 已选择任务后重新选择本车任务；共享结果不可用时，车 2 使用本车视觉识别结果。
 
-## 6. 构建
+## 3. 状态机
 
-以下命令只应在正式 Ubuntu 18.04 ROS 工作空间执行：
+主控使用固定编号描述比赛阶段。
 
-```bash
-cd ~/robot_ws
-catkin_make
-source devel/setup.bash
-rospack find pharmacy_mplus0
-```
+| 状态 | 编号 | 含义 |
+|---|---:|---|
+| `WAIT_TURN` | 8 | 等待另一辆车完成当前轮次 |
+| `GO_TO_BOARD1` | 9 | 前往识别板一 |
+| `BOARD1_RECOGNIZING` | 10 | 等待板一视觉结果 |
+| `GO_TO_PICKUP_WINDOWS` | 11 | 按顺序执行取样窗口任务 |
+| `GO_TO_BOARD2` | 12 | 前往识别板二 |
+| `BOARD2_RECOGNIZING` | 13 | 等待板二视觉结果 |
+| `GO_TO_LAB_WINDOW` | 14 | 前往化验窗口并完成送样 |
+| `GO_BACK_HOME` | 15 | 返回本车起点并完成任务交接 |
 
-本次重构所在开发机未执行上述命令。
+主控通过 `/nav_state` 发布当前状态。板一和板二视觉节点仅在对应识别状态处理图像，正式结果发布后停止该阶段的重复识别。
 
-## 7. 启动入口
+## 4. 视觉识别
 
-### 7.1 完整比赛入口
+### 4.1 识别板一
 
-车 1：
+识别板一用于读取四个窗口中的二维码内容。二维码有效文本包括空字符串、`A`、`B`、`C`、`AB`、`AC`、`BC` 和 `ABC`。
 
-```bash
-roslaunch pharmacy_mplus0 race_bringup.launch car_id:=1
-```
+视觉节点依次使用以下识别路径：
 
-车 2：
+1. 查找四个大窗口框，分别完成透视变换和二维码解码。
+2. 在满足配置条件时使用整图四二维码直接识别路径。
+3. 使用旧透视定位路径作为兜底。
 
-```bash
-roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2
-```
+四个窗口的完整文本结果经过标准化后，根据包含的样本数量选择任务；分数相同时选择位置更靠前的窗口。非法二维码文本会记录为异常窗口。只有连续多帧得到完全一致的有效结果时，节点才发布正式识别消息。
 
-完整入口先 include 基础系统，再 include 全部业务节点。
+板一输出包括：
 
-### 7.2 仅基础系统
+- `/cam_return`：主控使用的任务选择结果；
+- `/board1_all_text`：包含四窗口文本、选中窗口和消息内容的完整 JSON，用于双车共享。
 
-```bash
-roslaunch pharmacy_mplus0 base_camera_nav.launch
-```
+### 4.2 识别板二
 
-该入口只启动导航、Astra 摄像头和 web_video_server。
+识别板二完全采用双模型 YOLO 分类策略，模型以 ONNX 格式随功能包保存，不依赖外部训练目录。
 
-### 7.3 业务节点
+处理流程如下：
 
-```bash
-roslaunch pharmacy_mplus0 main.launch car_id:=1
-```
+1. 根据灰度阈值查找识别板外围黑框。
+2. 将黑框区域透视变换为粗定位图像。
+3. 查找内部白色区域并进行第二次透视对齐，得到 `480 × 320` 的标准板面。
+4. 从标准板面裁剪状态 ROI `[229, 91, 108, 59]` 和数字 ROI `[258, 150, 57, 52]`。
+5. 使用白色背景将两个 ROI 补为正方形，并缩放到 `224 × 224`。
+6. 通过 OpenCV DNN 分别运行状态模型和数字模型。
+7. 对连续 5 个有效对齐帧的分类概率进行滑动平均，并发布最终结果。
 
-`main.launch` 默认启动双车 TCP、裁判通信、视觉和主控。可以通过以下开关单独关闭节点：
+状态模型类别顺序为 `busy、idle`，数字模型类别顺序为 `10、5、6、7、8、9`。状态和数字模型在每个有效帧中都会执行；当状态为 `idle` 时忽略数字分类结果。
 
-```text
-start_dual_tcp
-start_referee
-start_detect
-start_nav_pharmacy
-```
+板二结果映射为：
 
-例如只启动裁判通信：
+| 识别结果 | `/board2_return` |
+|---|---|
+| 空闲 | `[0, 0]` |
+| 忙碌 5～10 秒 | `[1, wait_time]` |
 
-```bash
-roslaunch pharmacy_mplus0 main.launch \
-  car_id:=1 \
-  start_dual_tcp:=false \
-  start_detect:=false \
-  start_nav_pharmacy:=false \
-  start_referee:=true
-```
+黑框或内部白色区域定位失败时，概率缓存会被清空，节点继续等待新的有效画面。
 
-### 7.4 仅视觉节点
+## 5. 导航与航点
 
-```bash
-roslaunch pharmacy_mplus0 vision.launch car_id:=1
-```
+主控通过 `move_base` 发送导航目标。所有航点、两车起点和朝向索引统一保存在 `config/waypoints.yaml`，支持以下目标名称：
 
-该入口 include `main.launch`，只开启视觉节点。默认保留 3 秒启动延时和自动 respawn。
+- 取样窗口：`A`、`B`、`C`；
+- 化验窗口：`lab1`、`lab2`、`lab3`、`lab4`；
+- 识别位置：`board1`、`board2`；
+- 两车起点：`home_pose.1`、`home_pose.2`。
 
-### 7.5 单航点测试
+航点数据由平面坐标和朝向索引组成，朝向索引对应 `euler_angles` 中的角度。导航失败时主控调用代价地图清理服务并按照状态机逻辑重试；成功到达目标点后的清图行为由配置控制。
 
-首次使用建议只做 dry-run：
+## 6. 双车协同
 
-```bash
-roslaunch pharmacy_mplus0 test_navigation.launch \
-  car_id:=1 target:=A dry_run:=true
-```
+双车协同由任务令牌和板一完整结果两部分组成。
 
-确认坐标后再由现场人员进行实际导航：
+### 6.1 任务令牌
 
-```bash
-roslaunch pharmacy_mplus0 test_navigation.launch car_id:=1 target:=A
-```
+本车完成化验窗口任务并进入返程阶段时发布轮次完成消息。`dual_car_link.py` 将消息通过 TCP 重复发送给另一辆车，接收端完成来源、字段和序列号检查后发布对车完成话题。
 
-支持目标：`A`、`B`、`C`、`lab1`～`lab4`、`board1`、`board2`、`home`。
+提前收到的对车令牌会被缓存，只有本车处于等待状态或已经回到起点时才会启用。序列号用于避免网络重试造成同一轮任务被重复处理。
 
-## 8. 兼容接口
+### 6.2 板一结果共享
 
-结构迁移期间以下 ROS 接口保持不变：
+车 1 的 `/board1_all_text` 经双车 TCP 发送给车 2，并在车 2 发布为 `/dual_car/peer_board1_all_text`。共享内容包含：
 
-| 话题 | 类型 | 内容 |
+- 车辆编号和消息序列号；
+- 四个窗口的完整二维码文本；
+- 已选择的窗口及对应任务消息。
+
+车 2 使用共享结果时会清除车 1 的选择标记，再根据剩余内容重新执行任务选择。
+
+## 7. 裁判系统通信
+
+`referee_reporter.py` 汇总以下信息并通过 TCP 向裁判服务器发送 JSON 数据：
+
+- 车辆编号；
+- 当前平面速度；
+- `map` 坐标系中的车辆位置；
+- 当前任务阶段；
+- 板二识别结果 `CV1`；
+- 板一识别结果 `CV2`。
+
+速度来自 `/odometry/filtered`，位置优先来自 `map → base_footprint` 的 TF 变换，失败时回退到 `map → base_link`。TCP 连接支持断线重连。
+
+只有当前持有任务令牌的车辆拥有裁判上报权。主控通过带 latch 的 `/referee_active` 发布该状态；失去上报权时裁判节点关闭现有连接，重新获得上报权时按配置重置任务与视觉字段。
+
+## 8. 语音提示
+
+比赛语音位于 `resources/audio/`，主控根据当前任务动态组合文件名并异步调用系统音频命令播放。
+
+语音内容包括：
+
+- 板二空闲或等待秒数提示；
+- 取样窗口和样本类型提示；
+- 化验窗口、项目类型和样本数量提示。
+
+取样与送样语音的播放时机由状态机控制，不阻塞主控的 ROS 回调处理。
+
+## 9. ROS 接口
+
+### 9.1 主要业务话题
+
+| 话题 | 类型 | 数据含义 |
 |---|---|---|
-| `/nav_state` | `std_msgs/Int32` | 状态 8～15 |
+| `/nav_state` | `std_msgs/Int32` | 当前比赛状态 8～15 |
 | `/cam_return` | `std_msgs/Int32MultiArray` | `[C,A,B,count,selected_index,error_window]` |
 | `/board2_return` | `std_msgs/Int32MultiArray` | `[state,wait_time]` |
 | `/board1_all_text` | `std_msgs/String` | 本车板一完整 JSON |
 | `/dual_car/round_done` | `std_msgs/Int32MultiArray` | `[car_id,seq]` |
 | `/dual_car/peer_done` | `std_msgs/Int32MultiArray` | `[peer_id,seq]` |
-| `/dual_car/peer_board1_all_text` | `std_msgs/String` | 对车板一 JSON |
-| `/referee_task` | `std_msgs/String` | `R/A/B/C/1/2/3/4` |
-| `/referee_cv1` | `std_msgs/String` | `WAIT-0` 或 `WAIT-5`～`WAIT-10` |
-| `/referee_cv2` | `std_msgs/String` | 如 `AB-1` |
+| `/dual_car/peer_board1_all_text` | `std_msgs/String` | 对车板一完整 JSON |
+| `/referee_task` | `std_msgs/String` | 当前裁判任务标识 |
+| `/referee_cv1` | `std_msgs/String` | 板二结果 `WAIT-0` 或 `WAIT-5`～`WAIT-10` |
+| `/referee_cv2` | `std_msgs/String` | 板一结果，例如 `AB-1` |
+| `/referee_active` | `std_msgs/Bool` | 本车是否拥有裁判上报权 |
 
-双车 TCP 和裁判 TCP 的 JSON 字段、换行分隔、序列号、去重、重试与断线恢复保持不变。详细基线见 `docs/BEHAVIOR_BASELINE.md`。
+### 9.2 图像与导航接口
 
-## 9. 比赛流程
+视觉节点默认订阅 `/camera/rgb/image_raw`，在配置允许时可回退到 HTTP 视频流。导航部分使用 `move_base` action、TF 坐标变换和代价地图清理服务。
 
-- 车 1先发，车 2等待。
-- 取样顺序固定为 `C → A → B`。
-- 已完成取样窗口在导航重试时不会重复访问。
-- 本车完成化验窗口任务并进入返程状态 15时释放对车。
-- 提前收到的令牌缓存到本车回到起点后使用。
-- 车 2优先使用车 1板一完整结果并排除已选任务；不可用时回退本车识别。
+## 10. 配置结构
 
-主控专项静态核对见 `docs/MAIN_CONTROLLER_EQUIVALENCE.md`。
+| 配置文件 | 内容 |
+|---|---|
+| `config/strategy.yaml` | 状态机时序、车辆角色、化验窗口映射和语音映射 |
+| `config/waypoints.yaml` | 航点、朝向索引和两车起点 |
+| `config/vision.yaml` | 板一参数、板二 YOLO 参数、图像输入和相机地址 |
+| `config/communication.yaml` | ROS 话题、裁判 TCP、双车 TCP 和两车网络参数 |
 
-## 10. 当前验证范围
+同一套程序通过 `CAR_ID` 选择车辆配置。车辆编号决定本车身份、对车身份、初始任务状态、相机地址、TCP 端口和板一共享策略。
 
-已执行的检查仅限静态结构：
+## 11. 模型与资源
 
-- 新旧节点允许变换后的全文比较；
-- launch XML 解析和参数映射；
-- 配置键、默认值和迁移路径核对；
-- Python 2.7 禁用语法扫描；
-- Catkin 元数据、安装节点和目录结构核对。
+板二模型位于：
 
-未执行：
+```text
+models/board2/status_best.onnx
+models/board2/number_best.onnx
+```
 
-- Python/ROS 节点运行；
-- `catkin_make`、`rospack find`、`roslaunch`；
-- 摄像头、模板、音频、TF、move_base；
-- 双车网络、裁判服务器和实车完整流程。
+语音资源位于：
 
-上述运行验证必须在资源齐全的 Ubuntu 18.04 正式环境完成，不能把本机静态检查视为实车验证通过。
+```text
+resources/audio/
+```
 
-## 11. 已知待办
+模型与资源路径由 `rospkg` 根据当前 ROS 包位置解析，不依赖固定用户名或工作空间绝对路径。
 
-- 从小车复制真实板二模板和语音文件。
-- 确认 `package.xml` 中当前占位许可证 `TODO`。
-- 在正式工作空间确认不存在另一个同名 `pharmacy_mplus0` 包。
-- 按 `docs/BEHAVIOR_BASELINE.md` 的顺序完成正式环境和双车实车回归。
+## 12. 功能包目录
+
+```text
+pharmacy_mplus0/
+├── config/                     # 比赛参数配置
+├── docs/                       # 行为和接口说明
+├── launch/                     # ROS 启动文件
+├── models/board2/              # 板二 ONNX 模型
+├── resources/audio/            # 比赛语音
+├── scripts/                    # ROS 运行节点
+├── src/pharmacy_mplus0/        # 共享 Python 模块
+├── test/                       # 配置和纯逻辑测试
+├── CMakeLists.txt              # Catkin 构建与安装规则
+├── package.xml                 # 功能包元数据与依赖
+└── setup.py                    # Python 包安装配置
+```
+
+## 13. 运行基础
+
+功能包面向 ROS1 Melodic、Ubuntu 18.04 和 Python 2.7。主要使用以下组件：
+
+- ROS：`rospy`、`actionlib`、`move_base_msgs`、`geometry_msgs`、`nav_msgs`、`sensor_msgs`、`std_msgs`、`std_srvs`、`tf`、`cv_bridge`；
+- 视觉：OpenCV、OpenCV DNN、NumPy、pyzbar/zbar；
+- 配置与资源：PyYAML、rospkg；
+- 外部 ROS 功能包：`robot_navigation`、`astra_camera`、`web_video_server`；
+- 音频：SoX `play`。
+
+板二 ONNX 推理需要 OpenCV 提供 `cv2.dnn.readNetFromONNX` 接口。

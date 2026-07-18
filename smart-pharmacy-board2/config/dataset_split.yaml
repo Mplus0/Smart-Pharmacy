@@ -1,0 +1,118 @@
+free:
+  train:
+    - stop_001
+    - stop_002
+    - stop_003
+    - stop_005
+    - stop_006
+    - stop_009
+    - stop_010
+    - stop_011
+  val:
+    - stop_004
+    - stop_007
+  test:
+    - stop_008
+    - stop_012
+
+busy_5:
+  train:
+    - stop_001
+    - stop_002
+    - stop_003
+    - stop_005
+    - stop_006
+    - stop_008
+    - stop_010
+    - stop_012
+  val:
+    - stop_007
+    - stop_009
+  test:
+    - stop_004
+    - stop_011
+
+busy_6:
+  train:
+    - stop_001
+    - stop_002
+    - stop_003
+    - stop_005
+    - stop_007
+    - stop_008
+    - stop_010
+    - stop_012
+  val:
+    - stop_004
+    - stop_009
+  test:
+    - stop_006
+    - stop_011
+
+busy_7:
+  train:
+    - stop_001
+    - stop_002
+    - stop_003
+    - stop_005
+    - stop_006
+    - stop_009
+    - stop_010
+    - stop_011
+  val:
+    - stop_004
+    - stop_007
+  test:
+    - stop_008
+    - stop_012
+
+busy_8:
+  train:
+    - stop_001
+    - stop_002
+    - stop_003
+    - stop_006
+    - stop_009
+    - stop_010
+    - stop_011
+    - stop_012
+  val:
+    - stop_004
+    - stop_007
+  test:
+    - stop_005
+    - stop_008
+
+busy_9:
+  train:
+    - stop_001
+    - stop_002
+    - stop_003
+    - stop_005
+    - stop_007
+    - stop_010
+    - stop_011
+    - stop_012
+  val:
+    - stop_004
+    - stop_008
+  test:
+    - stop_006
+    - stop_009
+
+busy_10:
+  train:
+    - stop_001
+    - stop_002
+    - stop_003
+    - stop_005
+    - stop_007
+    - stop_008
+    - stop_009
+    - stop_011
+  val:
+    - stop_004
+    - stop_010
+  test:
+    - stop_006
+    - stop_012

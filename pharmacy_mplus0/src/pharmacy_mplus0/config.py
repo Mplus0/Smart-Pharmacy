@@ -58,6 +58,12 @@ def _as_tuple(value, field_name):
     return tuple(value)
 
 
+def _as_roi(value, field_name):
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        raise ValueError("%s 必须是四个元素的序列" % field_name)
+    return tuple(value)
+
+
 def _build_config():
     package_path = _package_path()
     strategy = _load_yaml("strategy.yaml")
@@ -73,12 +79,22 @@ def _build_config():
     )
 
     board2 = dict(vision["board2"])
-    board2["roi"] = tuple(board2["roi"])
+    board2["status_roi"] = _as_roi(board2["status_roi"], "board2.status_roi")
+    board2["number_roi"] = _as_roi(board2["number_roi"], "board2.number_roi")
+    board2_model_dir = os.path.join(package_path, "models", "board2")
+    board2["status_model_path"] = os.path.join(
+        board2_model_dir,
+        board2["status_model_file"]
+    )
+    board2["number_model_path"] = os.path.join(
+        board2_model_dir,
+        board2["number_model_file"]
+    )
 
     common = {
         "paths": {
             "audio_dir": os.path.join(package_path, "resources", "audio"),
-            "board2_template_dir": os.path.join(package_path, "resources", "board2"),
+            "board2_model_dir": board2_model_dir,
         },
         "topics": dict(communication["topics"]),
         "states": dict(STATES),

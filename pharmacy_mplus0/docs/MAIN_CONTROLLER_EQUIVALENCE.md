@@ -1,7 +1,6 @@
 # 主控等价迁移专项核对
 
-本文档记录 `main_controller.py` 相对迁移来源 `F1_yaofang_v5.py` 的静态核对结果。
-本阶段没有调整主控代码、状态机或参数。
+本文档记录 `main_controller.py` 相对三项优化版本 `F1_yaofang_v5.py` 的静态核对结果。
 
 ## 1. 源码等价性
 
@@ -11,7 +10,7 @@
 2. `dual_car_config` import 改为 `pharmacy_mplus0.config`；
 3. `board1_selection` import 改为 `pharmacy_mplus0.task_logic`。
 
-除上述三项外，没有修改函数顺序、函数体、条件、发布语句、日志、休眠、异常处理或线程模型。
+除上述三项外，规范化文件与三项优化来源保持相同的函数顺序、函数体、条件、发布语句、日志、休眠、异常处理和线程模型。
 
 ## 2. 状态编号和调度方式
 
@@ -66,7 +65,7 @@ C → A → B
 - 每个窗口只在导航成功并完成裁判任务停留后设置对应 `pickup_*_done=True`。
 - 后续窗口导航失败并重新进入状态 11时，已经完成的窗口会被跳过。
 - 每次应用新的板一任务结果时，三个完成标志都恢复为 `False`。
-- 取样裁判任务仍按 `窗口字母 → 停留 → R` 发布，语音触发位置不变。
+- 最后一个取样窗口的组合语音先异步启动，随后仍按 `窗口字母 → 停留 → R` 发布裁判任务。
 
 ## 6. 对车令牌
 
@@ -74,10 +73,10 @@ C → A → B
 - 新一轮进入状态 9时，`turn_released_this_round` 恢复为 `False`。
 - 本车完成化验窗口停留和送样播报后，先进入并发布状态 15，再调用 `release_next_car_if_needed()`。
 - 每轮只增加一次 `dual_round_seq` 并发布一次逻辑令牌；ROS 重复发布次数和间隔继续由原参数控制。
-- 发布后 `turn_released_this_round=True`、`have_turn=False`，但本车继续执行返程。
+- 发布 done 前先设置 `have_turn=False` 并发布 `/referee_active=False`；本车继续执行返程。
 - `peer_done_callback()` 继续校验对车车号和递增序列号。
 - 非状态 8收到的新令牌只设置 `peer_done_pending=True`；本车回到起点后才消耗。
-- 状态 8收到令牌时立即调用 `activate_turn_from_peer()` 进入状态 9。
+- 状态 8收到令牌时立即调用 `activate_turn_from_peer()`，先发布 `/referee_active=True` 再进入状态 9。
 
 ## 7. 对车板一结果
 
@@ -95,8 +94,9 @@ C → A → B
 - 板一结果接收后立即重复发布 CV2。
 - 板二结果接收后立即重复发布 CV1。
 - 板二忙碌时播放 `WAIT-N.wav` 后等待 N 秒；空闲时播放 `WAIT-0.wav` 且不增加等待。
-- 到达化验窗口发布 `1/2/3/4`，停留后发布 `R`，然后播放送样语音。
+- 到达化验窗口先异步启动送样语音，再发布 `1/2/3/4`，停留后发布 `R`。
 - 音频仍通过 `subprocess.Popen(["play", path])` 启动，没有增加队列或同步等待。
+- 成功到达后的代价地图清理由 `clear_costmaps_on_arrival` 控制，当前默认关闭；导航超时或失败时仍清图。
 
 ## 9. 本阶段未执行项
 

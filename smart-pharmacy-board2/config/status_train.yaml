@@ -1,0 +1,55 @@
+seed: 57
+
+data:
+  root: results/classification_dataset/status
+  class_names:
+    - idle
+    - busy
+
+  train_subset:
+    enabled: true
+    seed: 57
+
+    # 保留全部空闲训练样本。
+    keep_all_idle: true
+
+    # busy_5～busy_10 每类选择两个完整停车批次。
+    busy_stops_per_source_class: 2
+
+    busy_source_classes:
+      - busy_5
+      - busy_6
+      - busy_7
+      - busy_8
+      - busy_9
+      - busy_10
+
+model:
+  weights: yolo11n-cls.pt
+  image_size: 224
+  dropout: 0.20
+
+training:
+  epochs: 100
+  batch_size: 32
+  num_workers: 4
+  patience: 20
+  optimizer: AdamW
+  learning_rate: 0.001
+  final_learning_rate_fraction: 0.01
+  weight_decay: 0.0001
+  use_amp: true
+  deterministic: true
+  device: auto
+
+augmentation:
+  rotation_degrees: 3
+  translate: 0.06
+  scale: 0.05
+  brightness: 0.18
+  saturation: 0.08
+
+output:
+  project: results/status_classifier
+  name: status_yolo11n_cls_seed57
+  overwrite: false

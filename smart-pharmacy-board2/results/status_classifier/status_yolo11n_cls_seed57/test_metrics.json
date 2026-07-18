@@ -1,0 +1,18 @@
+{
+  "accuracy": 1.0,
+  "balanced_accuracy": 1.0,
+  "recall_per_class": {
+    "idle": 1.0,
+    "busy": 1.0
+  },
+  "confusion_counts": {
+    "idle": {
+      "idle": 10,
+      "busy": 0
+    },
+    "busy": {
+      "idle": 0,
+      "busy": 60
+    }
+  }
+}

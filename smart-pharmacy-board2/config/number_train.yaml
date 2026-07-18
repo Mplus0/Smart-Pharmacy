@@ -1,0 +1,41 @@
+seed: 57
+
+data:
+  root: results/classification_dataset/number
+  class_names:
+    - "5"
+    - "6"
+    - "7"
+    - "8"
+    - "9"
+    - "10"
+
+model:
+  weights: yolo11n-cls.pt
+  image_size: 224
+  dropout: 0.20
+
+training:
+  epochs: 100
+  batch_size: 32
+  num_workers: 4
+  patience: 20
+  optimizer: AdamW
+  learning_rate: 0.001
+  final_learning_rate_fraction: 0.01
+  weight_decay: 0.0001
+  use_amp: true
+  deterministic: true
+  device: auto
+
+augmentation:
+  rotation_degrees: 2
+  translate: 0.04
+  scale: 0.03
+  brightness: 0.15
+  saturation: 0.05
+
+output:
+  project: results/number_classifier
+  name: number_yolo11n_cls_seed57
+  overwrite: false

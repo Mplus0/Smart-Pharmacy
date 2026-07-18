@@ -30,7 +30,7 @@ catkin_install_python(PROGRAMS
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-install(DIRECTORY config docs launch resources
+install(DIRECTORY config docs launch models resources
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 

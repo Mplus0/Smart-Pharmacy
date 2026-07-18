@@ -20,7 +20,7 @@ import math
 import tf
 
 from nav_msgs.msg import Odometry
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 
 from pharmacy_mplus0.config import COMMON, get_car_config, get_car_id
 
@@ -34,6 +34,10 @@ SERVER_PORT = REFEREE_CFG["server_port"]
 SEND_RATE_HZ = REFEREE_CFG["send_rate_hz"]
 SOCKET_TIMEOUT = REFEREE_CFG["socket_timeout_sec"]
 RECONNECT_SLEEP = REFEREE_CFG["reconnect_sleep_sec"]
+SEND_ONLY_WHEN_ACTIVE = bool(REFEREE_CFG.get("send_only_when_active", True))
+RESET_TASK_CV_ON_ACTIVATE = bool(
+    REFEREE_CFG.get("reset_task_cv_on_activate", True)
+)
 
 # 裁判 odom 坐标从 TF 读取：map -> base_footprint / base_link
 TF_MAP_FRAME = "map"
@@ -58,6 +62,13 @@ class RefereeClient(object):
         self.tcp_client = None
         self.is_connected = False
         self.stop_event = threading.Event()
+        self.socket_lock = threading.RLock()
+
+        # 开启单车上报时，默认不连接。
+        # 导航节点通过 latched /referee_active 告知当前任务令牌归属。
+        self.active_event = threading.Event()
+        if not SEND_ONLY_WHEN_ACTIVE:
+            self.active_event.set()
 
         # payload 会被发送线程和 ROS 回调线程同时访问，因此加锁保护
         self.payload_lock = threading.Lock()
@@ -100,6 +111,12 @@ class RefereeClient(object):
         rospy.Subscriber(TOPICS["referee_task"], String, self.task_cb, queue_size=10)
         rospy.Subscriber(TOPICS["referee_cv1"], String, self.cv1_cb, queue_size=10)
         rospy.Subscriber(TOPICS["referee_cv2"], String, self.cv2_cb, queue_size=10)
+        rospy.Subscriber(
+            TOPICS["referee_active"],
+            Bool,
+            self.referee_active_cb,
+            queue_size=10
+        )
 
     def start_send_thread(self):
         """启动后台发送线程。"""
@@ -108,35 +125,77 @@ class RefereeClient(object):
         self.thread.start()
 
     def connect_server(self):
-        """循环尝试连接裁判服务器，直到连接成功或节点退出。"""
+        """只在本车拥有裁判上报权时连接服务器。"""
         while (not rospy.is_shutdown()
                and not self.stop_event.is_set()
-               and not self.is_connected):
+               and not self.is_connected
+               and self.is_referee_active()):
+            client = None
             try:
                 self.close_socket()
 
-                self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.tcp_client.settimeout(SOCKET_TIMEOUT)
-                self.tcp_client.connect((self.server_ip, self.server_port))
+                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client.settimeout(SOCKET_TIMEOUT)
+                client.connect((self.server_ip, self.server_port))
 
-                self.is_connected = True
-                rospy.loginfo("[裁判系统] TCP 连接成功！")
+                # 连接过程中可能刚好发生双车令牌交接。
+                if not self.is_referee_active():
+                    try:
+                        client.close()
+                    except Exception:
+                        pass
+                    return
+
+                with self.socket_lock:
+                    self.tcp_client = client
+                    self.is_connected = True
+
+                rospy.loginfo(
+                    "[裁判系统] car%s 获得上报权，TCP 连接成功！",
+                    CAR_CONFIG["car_id"]
+                )
 
             except Exception as e:
-                rospy.logwarn_throttle(
-                    3,
-                    "[裁判系统] 正在尝试连接裁判服务器: %s:%s，原因: %s",
-                    self.server_ip,
-                    self.server_port,
-                    str(e)
-                )
-                rospy.sleep(RECONNECT_SLEEP)
+                if client is not None:
+                    try:
+                        client.close()
+                    except Exception:
+                        pass
+
+                if self.is_referee_active():
+                    rospy.logwarn_throttle(
+                        3,
+                        "[裁判系统] car%s 正在尝试连接裁判服务器: %s:%s，原因: %s",
+                        CAR_CONFIG["car_id"],
+                        self.server_ip,
+                        self.server_port,
+                        str(e)
+                    )
+                    rospy.sleep(RECONNECT_SLEEP)
 
     def send_loop(self):
-        """后台持续发送数据。"""
+        """没有裁判上报权时不连接、不发送，并关闭已有连接。"""
         rate = rospy.Rate(SEND_RATE_HZ)
 
         while not rospy.is_shutdown() and not self.stop_event.is_set():
+            if not self.is_referee_active():
+                if self.is_connected or self.tcp_client is not None:
+                    rospy.loginfo(
+                        "[裁判系统] car%s 已失去上报权，关闭 TCP 连接",
+                        CAR_CONFIG["car_id"]
+                    )
+                    self.is_connected = False
+                    self.close_socket()
+
+                rospy.loginfo_throttle(
+                    2.0,
+                    "[裁判系统] car%s 当前不拥有上报权，暂停连接和发送",
+                    CAR_CONFIG["car_id"]
+                )
+                if not self.safe_sleep(rate):
+                    break
+                continue
+
             if not self.is_connected:
                 self.connect_server()
                 if not self.safe_sleep(rate):
@@ -144,16 +203,33 @@ class RefereeClient(object):
                 continue
 
             try:
-                # 复制一份 payload 再发送，避免发送过程中被回调修改
                 with self.payload_lock:
                     payload_copy = dict(self.payload)
 
+                # 复制数据后再次检查，减少令牌交接瞬间多发一帧的可能。
+                if not self.is_referee_active():
+                    self.is_connected = False
+                    self.close_socket()
+                    if not self.safe_sleep(rate):
+                        break
+                    continue
+
+                with self.socket_lock:
+                    client = self.tcp_client
+
+                if client is None:
+                    self.is_connected = False
+                    if not self.safe_sleep(rate):
+                        break
+                    continue
+
                 json_str = json.dumps(payload_copy, ensure_ascii=False) + "\n"
-                self.tcp_client.sendall(json_str.encode('utf-8'))
+                client.sendall(json_str.encode("utf-8"))
 
                 rospy.loginfo_throttle(
                     0.5,
-                    "正常发送裁判数据: %s",
+                    "car%s 正常发送裁判数据: %s",
+                    CAR_CONFIG["car_id"],
                     json_str.strip()
                 )
 
@@ -165,14 +241,57 @@ class RefereeClient(object):
             if not self.safe_sleep(rate):
                 break
 
+    def is_referee_active(self):
+        """本车当前是否允许连接并向裁判软件上报。"""
+        if not SEND_ONLY_WHEN_ACTIVE:
+            return True
+        return self.active_event.is_set()
+
+    def referee_active_cb(self, msg):
+        """任务令牌变化回调。"""
+        if not SEND_ONLY_WHEN_ACTIVE:
+            return
+
+        new_active = bool(msg.data)
+        old_active = self.active_event.is_set()
+
+        if new_active:
+            if not old_active and RESET_TASK_CV_ON_ACTIVATE:
+                with self.payload_lock:
+                    self.payload["task"] = "R"
+                    self.payload["CV1"] = "None"
+                    self.payload["CV2"] = "None"
+
+            self.active_event.set()
+
+            if not old_active:
+                rospy.loginfo(
+                    "[裁判系统] car%s 获得裁判上报权",
+                    CAR_CONFIG["car_id"]
+                )
+        else:
+            self.active_event.clear()
+
+            if old_active:
+                rospy.loginfo(
+                    "[裁判系统] car%s 失去裁判上报权，立即停止发送",
+                    CAR_CONFIG["car_id"]
+                )
+
+            self.is_connected = False
+            self.close_socket()
+
     def close_socket(self):
         """关闭当前 socket。"""
-        if self.tcp_client:
+        with self.socket_lock:
+            client = self.tcp_client
+            self.tcp_client = None
+
+        if client:
             try:
-                self.tcp_client.close()
+                client.close()
             except Exception:
                 pass
-            self.tcp_client = None
 
     def safe_sleep(self, rate):
         """封装 rate.sleep，节点退出时返回 False。"""

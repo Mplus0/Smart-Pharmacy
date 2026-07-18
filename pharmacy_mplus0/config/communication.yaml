@@ -8,6 +8,7 @@ topics:
   referee_task: "/referee_task"
   referee_cv1: "/referee_cv1"
   referee_cv2: "/referee_cv2"
+  referee_active: "/referee_active"
   round_done: "/dual_car/round_done"
   peer_done: "/dual_car/peer_done"
   odom: "/odometry/filtered"
@@ -15,11 +16,13 @@ topics:
   move_base_action: "move_base"
 
 referee:
-  server_ip: "192.168.124.2"
+  server_ip: "192.168.124.6"
   server_port: 8888
   send_rate_hz: 2
   socket_timeout_sec: 3.0
   reconnect_sleep_sec: 0.5
+  send_only_when_active: true
+  reset_task_cv_on_activate: true
   valid_tasks: ["R", "A", "B", "C", "1", "2", "3", "4"]
 
 dual_tcp:

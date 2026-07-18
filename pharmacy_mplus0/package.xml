@@ -44,6 +44,8 @@
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>move_base_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>python-numpy</exec_depend>
+  <exec_depend>python-opencv</exec_depend>
   <exec_depend>python-rospkg</exec_depend>
   <exec_depend>python-yaml</exec_depend>
   <exec_depend>robot_navigation</exec_depend>

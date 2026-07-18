@@ -1,0 +1,32 @@
+{
+  "model": "yolo11n-cls.pt",
+  "dataset": "results/classification_dataset/status",
+  "class_names": [
+    "idle",
+    "busy"
+  ],
+  "seed": 57,
+  "image_size": 224,
+  "sample_counts": {
+    "train": {
+      "idle": 40,
+      "busy": 60
+    },
+    "val": {
+      "idle": 10,
+      "busy": 60
+    },
+    "test": {
+      "idle": 10,
+      "busy": 60
+    }
+  },
+  "best_model": "/datas/Mplus0/project/yolo_train/smart-pharmacy-board2/results/status_classifier/status_yolo11n_cls_seed57/weights/best.pt",
+  "test_top1_accuracy": 1.0,
+  "test_top5_accuracy": 1.0,
+  "test_balanced_accuracy": 1.0,
+  "test_recall_per_class": {
+    "idle": 1.0,
+    "busy": 1.0
+  }
+}

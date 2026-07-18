@@ -4,7 +4,7 @@
 # 保留 .gitignore
 !/.gitignore
 
-# 只同步以下四个项目目录
+# 只同步以下五个项目目录
 !/dual_car_refactor/
 !/dual_car_refactor/**
 
@@ -16,6 +16,9 @@
 
 !/robot_navigation/
 !/robot_navigation/**
+
+!/smart-pharmacy-board2/
+!/smart-pharmacy-board2/**
 
 
 # ROS / Catkin 编译产物

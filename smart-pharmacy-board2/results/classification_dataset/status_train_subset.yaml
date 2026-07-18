@@ -1,0 +1,30 @@
+enabled: true
+seed: 57
+selected_train_stops:
+  free:
+  - stop_001
+  - stop_002
+  - stop_003
+  - stop_005
+  - stop_006
+  - stop_009
+  - stop_010
+  - stop_011
+  busy_5:
+  - stop_001
+  - stop_003
+  busy_6:
+  - stop_001
+  - stop_002
+  busy_7:
+  - stop_005
+  - stop_009
+  busy_8:
+  - stop_006
+  - stop_009
+  busy_9:
+  - stop_001
+  - stop_011
+  busy_10:
+  - stop_003
+  - stop_007

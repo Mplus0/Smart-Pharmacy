@@ -10,6 +10,8 @@
 
 所有命令均在小车终端执行。车 1使用 `car_id:=1`，车 2使用 `car_id:=2`。
 
+当前版本使用包内 ONNX 模型识别板二，并启用裁判单车上报。单独启动裁判节点时需手动发布 `/referee_active=True`。
+
 ## 1. 部署前检查
 
 ### 1.1 确认目录名称
@@ -40,20 +42,15 @@ chmod +x ~/robot_ws/src/pharmacy_mplus0/scripts/*.py
 ### 1.4 检查资源目录
 
 ```bash
-ls -la ~/robot_ws/src/pharmacy_mplus0/resources/board2
+ls -lh ~/robot_ws/src/pharmacy_mplus0/models/board2
 ls -la ~/robot_ws/src/pharmacy_mplus0/resources/audio
 ```
 
-板二模板应包含：
+板二模型应包含：
 
 ```text
-free.png
-busy_5.png
-busy_6.png
-busy_7.png
-busy_8.png
-busy_9.png
-busy_10.png
+status_best.onnx
+number_best.onnx
 ```
 
 音频至少需要包含本次测试会触发的 `WAIT-*.wav`、取样和送样语音。
@@ -61,23 +58,19 @@ busy_10.png
 ### 1.5 检查关键配置
 
 ```bash
-grep -n 'force_label_for_debug' ~/robot_ws/src/pharmacy_mplus0/config/vision.yaml
+grep -n 'model_file\|smoothing_window\|status_roi\|number_roi' ~/robot_ws/src/pharmacy_mplus0/config/vision.yaml
 grep -n 'server_ip\|server_port' ~/robot_ws/src/pharmacy_mplus0/config/communication.yaml
 grep -n 'peer_ip\|peer_port\|local_port' ~/robot_ws/src/pharmacy_mplus0/config/communication.yaml
 grep -n 'camera_url' -A 2 ~/robot_ws/src/pharmacy_mplus0/config/vision.yaml
 ```
 
-注意：当前默认配置为：
+确认目标机 OpenCV 支持 ONNX DNN：
 
-```yaml
-force_label_for_debug: "free"
+```bash
+python -c 'import cv2; print(cv2.__version__); print(hasattr(cv2.dnn, "readNetFromONNX"))'
 ```
 
-在这个配置下，板二固定返回空闲 `[0, 0]`，不会使用模板。测试真实板二模板前，需要由现场负责人将其改为：
-
-```yaml
-force_label_for_debug: null
-```
+最后一项必须输出 `True`；此检查只读取当前环境，不安装或升级依赖。
 
 ## 2. 编译与环境加载
 
@@ -234,13 +227,13 @@ rostopic pub /nav_state std_msgs/Int32 'data: 13' -1
 rostopic echo /board2_return
 ```
 
-当前 `force_label_for_debug: "free"` 时，预期结果为：
+板面为空闲时预期结果为：
 
 ```text
 data: [0, 0]
 ```
 
-真实模板测试前确认配置已改为 `null`，并重新启动视觉节点使配置生效。
+板面忙碌时预期结果为 `[1, 5]`～`[1, 10]`。模型会在黑框与内白区对齐成功后累计 5 个有效帧再发布一次。
 
 ## 6. 第四阶段：单独测试双车 TCP
 
