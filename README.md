@@ -7,7 +7,6 @@
 | 目录 | 定位 | 是否参与主程序运行 |
 |---|---|---|
 | `pharmacy_mplus0/` | 当前比赛主功能包，包含状态机、视觉、导航调度、双车通信和裁判通信 | 是 |
-| `pharmacy_pkg/` | 未规范化的原始版本代码，用于历史对照 | 否 |
 | `robot_navigation/` | 底盘、定位、路径规划和 `move_base` 启动配置 | 是，作为独立 ROS 功能包 |
 | `smart-pharmacy-board2/` | 识别板二的数据处理、YOLO 训练、测试和结果留档 | 否，仅用于模型开发 |
 
@@ -18,10 +17,9 @@ flowchart LR
     NAV["robot_navigation<br/>导航与定位"] --> MAIN["pharmacy_mplus0<br/>比赛主功能包"]
     TRAIN["smart-pharmacy-board2<br/>训练与测试留档"] -->|"导出 ONNX 模型"| MODEL["pharmacy_mplus0/models/board2"]
     MODEL --> MAIN
-    LEGACY["pharmacy_pkg<br/>原始代码留档"] -. "仅供对照" .-> MAIN
 ```
 
-`pharmacy_mplus0` 已包含运行所需的板二 ONNX 模型，不会在运行时导入或读取 `smart-pharmacy-board2`。主程序同样不依赖 `pharmacy_pkg` 中的任何代码或资源。
+`pharmacy_mplus0` 已包含运行所需的板二 ONNX 模型，不会在运行时导入或读取 `smart-pharmacy-board2`。
 
 ## 主功能包
 
@@ -178,7 +176,6 @@ roslaunch pharmacy_mplus0 race_bringup.launch car_id:=2
 ```text
 Smart-Pharmacy/
 ├── pharmacy_mplus0/          # 当前比赛主功能包
-├── pharmacy_pkg/             # 原始代码留档
 ├── robot_navigation/         # 导航功能包
 ├── smart-pharmacy-board2/    # 板二 YOLO 训练与测试留档
 ├── .gitignore
