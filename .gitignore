@@ -3,6 +3,7 @@
 
 # 保留 .gitignore
 !/.gitignore
+!/README.md
 
 # 只同步以下五个项目目录
 !/dual_car_refactor/
