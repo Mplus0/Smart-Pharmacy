@@ -1,0 +1,46 @@
+# ROS 话题、裁判通信和双车 TCP 参数。
+
+topics:
+  cmd_vel: "/cmd_vel"
+  cam_return: "/cam_return"
+  board2_return: "/board2_return"
+  nav_state: "/nav_state"
+  referee_task: "/referee_task"
+  referee_cv1: "/referee_cv1"
+  referee_cv2: "/referee_cv2"
+  round_done: "/dual_car/round_done"
+  peer_done: "/dual_car/peer_done"
+  odom: "/odometry/filtered"
+  clear_costmaps_service: "/move_base/clear_costmaps"
+  move_base_action: "move_base"
+
+referee:
+  server_ip: "192.168.124.2"
+  server_port: 8888
+  send_rate_hz: 2
+  socket_timeout_sec: 3.0
+  reconnect_sleep_sec: 0.5
+  valid_tasks: ["R", "A", "B", "C", "1", "2", "3", "4"]
+
+dual_tcp:
+  local_host: "0.0.0.0"
+  socket_timeout_sec: 2.0
+  retry_interval_sec: 0.20
+  send_duration_sec: 3.0
+  peer_done_publish_repeat: 3
+  peer_done_publish_interval_sec: 0.05
+  server_accept_timeout_sec: 1.0
+  client_recv_timeout_sec: 2.0
+  max_line_chars: 2048
+  shared_token: null
+  check_peer_ip: true
+
+cars:
+  1:
+    local_port: 9001
+    peer_ip: "192.168.124.9"
+    peer_port: 9002
+  2:
+    local_port: 9002
+    peer_ip: "192.168.124.3"
+    peer_port: 9001

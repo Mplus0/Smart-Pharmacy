@@ -1,0 +1,49 @@
+[
+  {
+    "name": "prefer_abc",
+    "all_text": ["A", "AB", "ABC", ""],
+    "expected": {
+      "all_text": ["A", "AB", "ABC", ""],
+      "selected_index": 2,
+      "selected_text": "ABC",
+      "selected_msg": [1, 1, 1, 3, 2, 0]
+    }
+  },
+  {
+    "name": "first_equal_length_combo",
+    "all_text": ["AB", "AC", "B", ""],
+    "expected": {
+      "all_text": ["AB", "AC", "B", ""],
+      "selected_index": 0,
+      "selected_text": "AB",
+      "selected_msg": [0, 1, 1, 2, 0, 0]
+    }
+  },
+  {
+    "name": "no_valid_result",
+    "all_text": ["", "", "", ""],
+    "expected": null
+  },
+  {
+    "name": "record_first_invalid_window",
+    "all_text": ["BAD", "A", "", ""],
+    "expected": {
+      "all_text": ["BAD", "A", "", ""],
+      "selected_index": 1,
+      "selected_text": "A",
+      "selected_msg": [0, 1, 0, 1, 1, 1]
+    }
+  },
+  {
+    "name": "peer_selected_item_removed",
+    "source_all_text": ["ABC", "AB", "A", ""],
+    "peer_selected_index": 0,
+    "all_text": ["", "AB", "A", ""],
+    "expected": {
+      "all_text": ["", "AB", "A", ""],
+      "selected_index": 1,
+      "selected_text": "AB",
+      "selected_msg": [0, 1, 1, 2, 1, 0]
+    }
+  }
+]

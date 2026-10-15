@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- 仅启动合并视觉节点，用于板一和板二调试。 -->
+
+  <arg name="car_id" default="1" doc="车辆编号：1 或 2"/>
+  <arg name="output" default="screen" doc="节点日志输出：screen 或 log"/>
+  <arg name="respawn_detect" default="true"/>
+  <arg name="detect_start_delay" default="3" doc="视觉识别节点延时启动秒数"/>
+
+  <include file="$(find pharmacy_mplus0)/launch/main.launch">
+    <arg name="car_id" value="$(arg car_id)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="start_dual_tcp" value="false"/>
+    <arg name="start_detect" value="true"/>
+    <arg name="start_nav_pharmacy" value="false"/>
+    <arg name="start_referee" value="false"/>
+    <arg name="respawn_detect" value="$(arg respawn_detect)"/>
+    <arg name="detect_start_delay" value="$(arg detect_start_delay)"/>
+  </include>
+</launch>

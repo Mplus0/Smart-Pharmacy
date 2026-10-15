@@ -1,0 +1,102 @@
+frequency: 30
+sensor_timeout: 0.1
+
+two_d_mode: true
+
+transform_time_offset: 0.0
+transform_timeout: 0.05
+
+print_diagnostics: true
+debug: false
+
+publish_tf: true
+publish_acceleration: false
+
+map_frame: /map
+odom_frame: /odom
+base_link_frame: /base_footprint
+world_frame: /odom
+
+
+# ============================================================
+# 轮速里程计输入
+# art_racecar.py 发布 odom
+# 不融合 x/y/yaw，只融合 vx、vy
+# ============================================================
+
+odom0: odom
+
+odom0_config: [false, false, false,
+               false, false, false,
+               true,  true,  false,
+               false, false, false,
+               false, false, false]
+
+odom0_queue_size: 10
+odom0_nodelay: true
+odom0_differential: false
+odom0_relative: false
+
+
+# ============================================================
+# IMU 输入
+# art_racecar.py 发布 imu_data
+# 融合 yaw 和 vyaw
+# ============================================================
+
+imu0: imu_data
+
+imu0_config: [false, false, false,
+              false, false, true,
+              false, false, false,
+              false, false, true,
+              false, false, false]
+
+imu0_queue_size: 10
+imu0_nodelay: true
+imu0_differential: false
+imu0_relative: true
+
+# 不融合线加速度，所以设 false
+imu0_remove_gravitational_acceleration: false
+
+
+# 先不要启用过严的 rejection threshold
+# 否则 yaw 或角速度容易被误拒绝
+# odom0_twist_rejection_threshold: 2.0
+# imu0_pose_rejection_threshold: 2.5
+# imu0_twist_rejection_threshold: 2.5
+
+
+process_noise_covariance: [0.01, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0.01, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    1e-6, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    1e-6, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    1e-6, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0.08, 0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0.04, 0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0.01, 0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    1e-6, 0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    1e-6, 0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    1e-6, 0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0.04, 0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0.02, 0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0.02, 0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    1e-6]
+
+
+initial_estimate_covariance: [0.001, 0,     0,     0,     0,     0,    0,    0,    0,     0,     0,     0,    0,   0,   0,
+                              0,     0.001, 0,     0,     0,     0,    0,    0,    0,     0,     0,     0,    0,   0,   0,
+                              0,     0,     1e-9,  0,     0,     0,    0,    0,    0,     0,     0,     0,    0,   0,   0,
+                              0,     0,     0,     1e-9,  0,     0,    0,    0,    0,     0,     0,     0,    0,   0,   0,
+                              0,     0,     0,     0,     1e-9,  0,    0,    0,    0,     0,     0,     0,    0,   0,   0,
+                              0,     0,     0,     0,     0,     0.01, 0,    0,    0,     0,     0,     0,    0,   0,   0,
+                              0,     0,     0,     0,     0,     0,    0.01, 0,    0,     0,     0,     0,    0,   0,   0,
+                              0,     0,     0,     0,     0,     0,    0,    0.01, 0,     0,     0,     0,    0,   0,   0,
+                              0,     0,     0,     0,     0,     0,    0,    0,    1e-9,  0,     0,     0,    0,   0,   0,
+                              0,     0,     0,     0,     0,     0,    0,    0,    0,     1e-9,  0,     0,    0,   0,   0,
+                              0,     0,     0,     0,     0,     0,    0,    0,    0,     0,     1e-9,  0,    0,   0,   0,
+                              0,     0,     0,     0,     0,     0,    0,    0,    0,     0,     0,     0.01, 0,   0,   0,
+                              0,     0,     0,     0,     0,     0,    0,    0,    0,     0,     0,     0,    0.1, 0,   0,
+                              0,     0,     0,     0,     0,     0,    0,    0,    0,     0,     0,     0,    0,   0.1, 0,
+                              0,     0,     0,     0,     0,     0,    0,    0,    0,     0,     0,     0,    0,   0,   1e-9]

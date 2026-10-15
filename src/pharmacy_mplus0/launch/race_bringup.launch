@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- 完整比赛入口：基础系统 + 全部业务节点。 -->
+
+  <arg name="car_id" default="1" doc="车辆编号：1 或 2"/>
+  <arg name="output" default="screen" doc="节点日志输出：screen 或 log"/>
+
+  <arg name="start_base" default="true" doc="是否启动基础系统"/>
+  <arg name="start_navigation" default="true" doc="是否启动 robot_navigation / robot_race_init"/>
+  <arg name="start_camera" default="true" doc="是否启动 Astra 摄像头驱动"/>
+  <arg name="start_video_server" default="true" doc="是否启动 web_video_server"/>
+  <arg name="use_race_init" default="true" doc="true 使用 robot_race_init.launch；false 使用 robot_navigation.launch"/>
+
+  <arg name="start_dual_tcp" default="true" doc="启动双车 TCP 通信节点"/>
+  <arg name="start_detect" default="true" doc="启动视觉识别节点"/>
+  <arg name="start_nav_pharmacy" default="true" doc="启动药房导航状态机节点"/>
+  <arg name="start_referee" default="true" doc="启动裁判通信节点"/>
+
+  <arg name="respawn_comm" default="true"/>
+  <arg name="respawn_detect" default="true"/>
+  <arg name="respawn_nav_pharmacy" default="false"/>
+  <arg name="respawn_referee" default="true"/>
+
+  <arg name="detect_start_delay" default="3" doc="视觉识别节点延时启动秒数"/>
+  <arg name="nav_start_delay" default="6" doc="药房状态机延时启动秒数"/>
+  <arg name="dual_publish_repeat" default="3"/>
+  <arg name="dual_publish_interval" default="0.10"/>
+
+  <group if="$(arg start_base)">
+    <include file="$(find pharmacy_mplus0)/launch/base_camera_nav.launch">
+      <arg name="start_navigation" value="$(arg start_navigation)"/>
+      <arg name="start_camera" value="$(arg start_camera)"/>
+      <arg name="start_video_server" value="$(arg start_video_server)"/>
+      <arg name="use_race_init" value="$(arg use_race_init)"/>
+    </include>
+  </group>
+
+  <include file="$(find pharmacy_mplus0)/launch/main.launch">
+    <arg name="car_id" value="$(arg car_id)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="start_dual_tcp" value="$(arg start_dual_tcp)"/>
+    <arg name="start_detect" value="$(arg start_detect)"/>
+    <arg name="start_nav_pharmacy" value="$(arg start_nav_pharmacy)"/>
+    <arg name="start_referee" value="$(arg start_referee)"/>
+    <arg name="respawn_comm" value="$(arg respawn_comm)"/>
+    <arg name="respawn_detect" value="$(arg respawn_detect)"/>
+    <arg name="respawn_nav_pharmacy" value="$(arg respawn_nav_pharmacy)"/>
+    <arg name="respawn_referee" value="$(arg respawn_referee)"/>
+    <arg name="detect_start_delay" value="$(arg detect_start_delay)"/>
+    <arg name="nav_start_delay" value="$(arg nav_start_delay)"/>
+    <arg name="dual_publish_repeat" value="$(arg dual_publish_repeat)"/>
+    <arg name="dual_publish_interval" value="$(arg dual_publish_interval)"/>
+  </include>
+</launch>
