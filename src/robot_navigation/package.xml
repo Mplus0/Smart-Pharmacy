@@ -52,6 +52,28 @@
 
 
   <!-- The export tag contains other, unspecified, tags -->
+  <!-- Runtime dependencies of the retained launch and Python entry points. -->
+  <exec_depend>amcl</exec_depend>
+  <exec_depend>clear_costmap_recovery</exec_depend>
+  <exec_depend>costmap_2d</exec_depend>
+  <exec_depend>dwa_local_planner</exec_depend>
+  <exec_depend>eprobot_description</exec_depend>
+  <exec_depend>eprobot_start</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>laser_filters</exec_depend>
+  <exec_depend>ls01d</exec_depend>
+  <exec_depend>lslidar_driver</exec_depend>
+  <exec_depend>map_server</exec_depend>
+  <exec_depend>move_base</exec_depend>
+  <exec_depend>navfn</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz</exec_depend>
+  <exec_depend>stage_ros</exec_depend>
+  <exec_depend>talos_laser_loc</exec_depend>
+  <exec_depend>teb_local_planner</exec_depend>
+  <exec_depend>tf</exec_depend>
+
   <export>
     <!-- Other tools can request additional information be placed here -->
 

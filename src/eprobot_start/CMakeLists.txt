@@ -21,17 +21,8 @@ find_package(catkin REQUIRED COMPONENTS
 # ssh firefly@192.168.1.76
 add_compile_options(-g -std=c++11)    #-g -> core dumped
 
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES eprobot_start
-#  CATKIN_DEPENDS geometry_msgs message_generation nav_msgs nav_msgs roscpp roslib rospy sensor_msgs std_msgs tf
-  DEPENDS system_lib
-)
+catkin_package()
 
 # defind robot status massage
 # command atkin_make -DCATKIN_WHITELIST_PACKAGES="new_msg"
-include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-include_directories(
-    include
-    include/${PROJECT_NAME}
-)
+include_directories(${catkin_INCLUDE_DIRS})

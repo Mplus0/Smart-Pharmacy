@@ -1,3 +1,0 @@
-<launch>
-    <node name="multi_mark" pkg="robot_navigation" type="exploring_slam.py" output="screen" />
-</launch>
