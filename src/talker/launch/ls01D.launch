@@ -1,0 +1,10 @@
+<launch>
+    <node name="talker" pkg="talker" type="talker">
+		<param name="serial_port" value="/dev/EPRobot_laser"/>
+		<param name="scan_topic" value="scan"/>
+		<param name="laser_link" value="laser_link"/>
+    </node>
+<!-- <node pkg="tf" type="static_transform_publisher" name="laser_baselink_broadcaster" args="0 0 0 0 0 0 base_link laser_link 100" /> -->
+
+
+</launch>

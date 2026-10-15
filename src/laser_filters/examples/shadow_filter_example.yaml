@@ -1,0 +1,28 @@
+scan_filter_chain:
+- name: shadows
+  type: laser_filters/ScanShadowsFilter
+  params:
+    min_angle: 10
+    max_angle: 120
+    neighbors: 4
+    window: 2
+# - name: box_filter
+  # type: laser_filters/LaserScanBoxFilter
+  # params:
+    # box_frame: base_laser_link       #base_laser_link
+    # max_x: 0.2
+    # max_y: 0.2
+    # max_z: 0.2
+    # min_x: -0.2
+    # min_y: -0.2
+    # min_z: -0.2
+    # invert: false
+
+
+#- name: dark_shadows
+# type: laser_filters/LaserScanIntensityFilter
+# params: 
+#    lower_threshold: 100
+#    upper_threshold: 10000
+#    disp_histogram: 0
+

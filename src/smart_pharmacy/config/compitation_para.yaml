@@ -1,0 +1,15 @@
+# 延时参数
+
+time0: 5.0    # 运行该程序后，停留多少时间（单位：秒），小车开始前进到识别区
+time1: 15.0     # 小车到达识别区，等待time1（单位：秒）后，走向配药区
+time2: 2.0     # 小车到达配药区，等待time2（单位：秒）后，走向答题区
+time3: 10.0     # 小车到达答题区，等待time3（单位：秒）后，走向取药区
+time4: 2.0     # 小车到达取药区，等待time4（单位：秒）后，走向起点
+time5: 5.0     # 小车到达起点，等待time5（单位：秒）后，下一轮出发
+
+
+camera_uri: 'http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw'
+# 0
+# 'http://192.168.31.70:8080/stream?topic=/usb_cam/image_raw'
+# 'http://192.168.12.1:8080/stream?topic=/camera/rgb/image_raw'
+

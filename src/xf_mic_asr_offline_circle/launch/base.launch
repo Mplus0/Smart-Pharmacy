@@ -1,0 +1,34 @@
+
+<launch>
+  <!-- 开启机器人底层相关节点  -->
+  <!-- <include file="$(find xf_mic_asr_offline_circle)/launch/include/voi_navigation1.launch" /> -->
+  <!-- <include file='$(find simple_follower)/launch/nodes/laserTracker.launch' /> -->
+  <rosparam command="load" file="$(find xf_mic_asr_offline_circle)/config/recognition_params.yaml" />
+
+  <node pkg="xf_mic_asr_offline_circle" type="call_recognition" name="call_recognition" />
+  <node pkg="xf_mic_asr_offline_circle" type="command_recognition" name="command_recognition" output="screen">
+    <param name="audio_path" type="string" value="$(find xf_mic_asr_offline_circle)"/> 
+  </node> 
+  <node pkg="xf_mic_asr_offline_circle" type="motion_control" name="motion_control" output="screen">
+      <param name="audio_path" type="string" value="$(find xf_mic_asr_offline_circle)"/> 
+  </node> 
+  <node pkg="xf_mic_asr_offline_circle" type="node_feedback" name="node_feedback" output="screen">
+      <param name="audio_path" type="string" value="$(find xf_mic_asr_offline_circle)"/> 
+  </node> 
+ 
+  <node pkg="xf_mic_asr_offline_circle" type="point_navigation" name="point_navigation" />
+  
+  <arg name="lidar_mode" value="Boost"/>
+  <node pkg="eprobot_start" type="art_racecar.py" name="base_control" output="screen">
+		<!--param name="base_kp"    type="double" value="8.47"/>
+		<param name="base_ki"    type="double" value="39.1"/>
+		<param name="base_kd"    type="double" value="0.18"/--> 		
+		<param name="base_kp"    type="double" value="1000.0"/>
+		<param name="base_ki"    type="double" value="100.0"/>
+		<param name="base_kd"    type="double" value="0.0"/> 
+		<param name="base_kv"    type="double" value="1.0"/>		
+		<param name="Laser_Mode"    type="string" value="$(arg lidar_mode)"/>	
+		<remap from="cmd_vel" to="mic_vel"/>
+  </node>
+
+</launch>
