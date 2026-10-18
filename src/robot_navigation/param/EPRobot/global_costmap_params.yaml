@@ -1,0 +1,42 @@
+global_costmap:
+  # 全局坐标系
+  global_frame: map
+
+  # 机器人基坐标系
+  robot_base_frame: base_footprint
+
+  # 全局地图更新频率
+  # 场地固定，不需要 5Hz
+  update_frequency: 2.0
+
+  # 发布频率主要用于 RViz 显示
+  publish_frequency: 1.0
+
+  # 全局地图不使用滚动窗口
+  rolling_window: false
+
+  # 与 map.yaml 中 resolution 保持一致
+  resolution: 0.05
+
+  # 低算力平台给 TF 一定容忍时间
+  transform_tolerance: 0.5
+
+  # 使用插件模式，不再额外写 static_map: true。原因是的比赛场地固定，动态障碍主要交给局部代价地图处理，这样更省算力，也能减少雷达噪声导致全局路径频繁变化。
+  plugins:
+    - {name: static_layer,    type: "costmap_2d::StaticLayer"}
+    - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
+
+  static_layer:
+    enabled: true
+    map_topic: "/map"
+
+  inflation_layer:
+    enabled: true
+
+    # 全局路径希望更居中、更平滑
+    # 0.20m 在 0.02m 分辨率下约 10 个栅格
+    # 对 500mm 窄通道仍然可用
+    inflation_radius: 0.3
+
+    # 比 10 略柔和，让全局路径更愿意走通道中间
+    cost_scaling_factor: 8

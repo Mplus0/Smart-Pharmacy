@@ -1,0 +1,16 @@
+<launch>
+
+<!-- amcl定位的launch -->
+    <!-- <include file="$(find smart_pharmacy)/launch/robot_race_init.launch"/>  -->
+  <include file="$(find robot_navigation)/launch/robot_race_init.launch"/> 
+
+<!-- mcl定位的launch -->
+  <!--<include file="$(find robot_navigation)/launch/robot_navigation.launch"/>
+  
+  <rosparam file="$(find smart_pharmacy)/config/compitation_para.yaml" command="load"/>-->
+  
+  <!-- <node pkg="pharmacy_pkg" type="smart_pharmacy.py" name="smart_pharmacy" output="screen">
+  </node> -->
+  
+
+</launch>

@@ -1,0 +1,32 @@
+
+# ROS / Catkin 编译产物
+build/
+devel/
+install/
+logs/
+.catkin_tools/
+
+# ROS 日志
+*.bag
+*.bag.active
+*.log
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 临时文件
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# IDE 配置
+.vscode/
+.idea/
+
+# yolo 训练数据集
+dataset/

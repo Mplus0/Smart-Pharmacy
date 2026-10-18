@@ -1,0 +1,10 @@
+# Low-speed waypoint acquisition profile, loaded after the existing TEB config.
+TebLocalPlannerROS:
+  xy_goal_tolerance: 0.05
+  yaw_goal_tolerance: 0.05235987755982989  # 3 degrees in radians
+  free_goal_vel: false
+  max_vel_x: 0.25
+  max_vel_x_backwards: 0.12
+  max_vel_theta: 0.8
+  acc_lim_x: 0.4
+  acc_lim_theta: 0.8

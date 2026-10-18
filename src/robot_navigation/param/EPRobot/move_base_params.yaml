@@ -1,0 +1,28 @@
+shutdown_costmaps: false
+controller_frequency: 10
+controller_patience: 3
+planner_frequency: 0
+planner_patience: 1.5
+conservative_reset_dist: 0.1
+oscillation_timeout: 8
+oscillation_distance: 0.1
+clearing_rotation_allowed: false
+recovery_behavior_enabled: true
+recovery_behaviors:
+  - name: conservative_reset
+    type: clear_costmap_recovery/ClearCostmapRecovery
+  - name: aggressive_reset
+    type: clear_costmap_recovery/ClearCostmapRecovery
+conservative_reset:
+  reset_distance: 1.0
+  affected_maps: local
+  force_updating: false
+  layer_names:
+    - obstacle_layer
+
+aggressive_reset:
+  reset_distance: 0.6
+  affected_maps: local
+  force_updating: false
+  layer_names:
+    - obstacle_layer

@@ -1,0 +1,8 @@
+<launch>
+  <!-- 实车底盘 + 雷达（按环境变量 ROBOT_TYPE 选 ls01d / lslidar），与主仓库 robot_navigation/robot_lidar.launch 思路一致。
+       使用前请将本包复制到实机 catkin_ws/src，并与 eprobot_start、lslidar_driver、ls01d、robot_navigation 等一起编译。 -->
+  <arg name="use_sim_time" default="false"/>
+  <param name="/use_sim_time" value="$(arg use_sim_time)"/>
+
+  <include file="$(find eprobot_start)/launch/EPRobot_start.launch"/>
+</launch>

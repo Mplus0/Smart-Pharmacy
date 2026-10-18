@@ -1,0 +1,12 @@
+<launch>
+  <!-- Reuse the running navigation and camera. One complete delivery cycle. -->
+  <arg name="max_rounds" default="1"/>
+  <include file="$(find pharmacy_pkg)/launch/pharmacy_main_no_referee.launch">
+    <arg name="car_id" value="1"/>
+    <arg name="start_base" value="false"/>
+    <arg name="start_dual_tcp" value="false"/>
+    <arg name="enable_dual_car" value="false"/>
+    <arg name="max_rounds" value="$(arg max_rounds)"/>
+    <arg name="respawn_detect" value="false"/>
+  </include>
+</launch>

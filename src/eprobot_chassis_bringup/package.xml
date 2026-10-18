@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>eprobot_chassis_bringup</name>
+  <version>0.1.0</version>
+  <description>Minimal launch to start EPRobot chassis (and lidar by ROBOT_TYPE). Copy this package into your real robot_ws/src after clone.</description>
+  <maintainer email="todo@example.com">craic</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>roslaunch</exec_depend>
+  <!-- 实车编译时需存在 eprobot_start（及 ls01d / lslidar_driver 等） -->
+  <exec_depend>eprobot_start</exec_depend>
+  <export/>
+</package>
