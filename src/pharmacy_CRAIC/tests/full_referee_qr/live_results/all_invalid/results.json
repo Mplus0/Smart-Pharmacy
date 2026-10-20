@@ -1,0 +1,61 @@
+{
+  "case": "all_invalid", 
+  "expected_message": null, 
+  "success": true, 
+  "expected_all_text": [
+    "ACD", 
+    "D", 
+    "https://www.hlcode.cn", 
+    ""
+  ], 
+  "nav_state_subscribers": [
+    "/board1_debug_detector"
+  ], 
+  "rounds": [
+    {
+      "all_text_messages": [], 
+      "latency_sec": 5.027, 
+      "frame_sha256": "70df7d1d761e78997765a4d130890a77fc3f204c1b276a7bb18db4620d393c7d", 
+      "messages": [], 
+      "visit": 1, 
+      "real_window_count": 4, 
+      "snapshot_decoded": [
+        "ACD", 
+        "D", 
+        "https://www.hlcode.cn", 
+        ""
+      ], 
+      "prior_seq": 37
+    }, 
+    {
+      "all_text_messages": [], 
+      "latency_sec": 5.023, 
+      "frame_sha256": "8dc18e76a37fea858e61432ba9c4e4797da6d5ce31014d44802ff7421f34bf64", 
+      "messages": [], 
+      "visit": 2, 
+      "real_window_count": 4, 
+      "snapshot_decoded": [
+        "ACD", 
+        "D", 
+        "https://www.hlcode.cn", 
+        ""
+      ], 
+      "prior_seq": 0
+    }, 
+    {
+      "all_text_messages": [], 
+      "latency_sec": 5.026, 
+      "frame_sha256": "696e9d205c26c90ba10a25bce828066942fc6022beb814a7af7afcb28d5f4e42", 
+      "messages": [], 
+      "visit": 3, 
+      "real_window_count": 4, 
+      "snapshot_decoded": [
+        "ACD", 
+        "D", 
+        "https://www.hlcode.cn", 
+        ""
+      ], 
+      "prior_seq": 0
+    }
+  ]
+}
