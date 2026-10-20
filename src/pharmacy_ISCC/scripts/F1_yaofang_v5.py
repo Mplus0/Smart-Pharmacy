@@ -27,7 +27,7 @@ import json
 import threading
 import argparse
 import tf
-from pharmacy_iscc.navigation_guard import NavigationGuard, target_pose, quaternion_yaw, validate_target
+from pharmacy_iscc.navigation_utils import NavigationGuard, target_pose, quaternion_yaw, validate_target
 
 import roslib
 import rospy
@@ -41,12 +41,12 @@ from visualization_msgs.msg import Marker
 from math import radians, pi
 from std_srvs.srv import Empty, Trigger, TriggerResponse
 from nav_msgs.msg import Odometry
-import subprocess
 import time
 
-from pharmacy_iscc.dual_car_config import COMMON, get_car_config, get_car_id
-from pharmacy_iscc.board1_selection import select_board1_from_all_text
+from pharmacy_iscc.config import COMMON, get_car_config, get_car_id
+from pharmacy_iscc.board1_detector import select_board1_from_all_text
 from pharmacy_iscc.recognition_records import RecognitionRecords
+from pharmacy_iscc.audio import play_audio
 
 CAR_ID = get_car_id(default=1)
 CAR_CONFIG = get_car_config(CAR_ID)
@@ -55,7 +55,6 @@ TOPICS = COMMON["topics"]
 NAV_CFG = COMMON["nav"]
 BOARD1_CFG = COMMON["board1"]
 
-AUDIO_DIR = COMMON["paths"]["audio_dir"]
 
 # 集中配置：状态、化验窗口映射、窗口日志名称
 STATE_WAIT_TURN = STATES["WAIT_TURN"]
@@ -140,7 +139,7 @@ class MoveBaseSquare(object):
 
     def init_runtime_state(self):
         """初始化状态机变量。"""
-        # 车辆专用信息来自 dual_car_config.py。
+        # 车辆专用信息由 config.py 从 vehicles.yaml 读取。
         self.enable_dual_car = bool(rospy.get_param("~enable_dual_car", False))
         self.max_rounds = int(rospy.get_param("~max_rounds", 1))
         if self.max_rounds < 0:
@@ -384,14 +383,14 @@ class MoveBaseSquare(object):
                     wait_started = time.time()
                     rospy.loginfo("化验区忙碌，识别等待 %d 秒，实际等待 %d 秒（含播报）",
                                   wait_time, actual_wait)
-                    self.play_audio("WAIT-%d.wav" % wait_time)
+                    play_audio("WAIT-%d.wav" % wait_time)
                     # 播报计入等待；若播报更长，仍坚持播报结束后才出发。
                     remaining = max(0.0, actual_wait - (time.time() - wait_started))
                     if remaining > 0 and not rospy.is_shutdown():
                         rospy.sleep(remaining)
                 else:
                     rospy.loginfo("化验区空闲，无需等待")
-                    self.play_audio("WAIT-0.wav")
+                    play_audio("WAIT-0.wav")
 
                 self.count = STATE_GO_TO_LAB_WINDOW
                 self.pub_nav_state.publish(self.count)
@@ -796,40 +795,6 @@ class MoveBaseSquare(object):
 
         rospy.loginfo("%s 窗口取样流程已完成，已记录完成状态", window_name)
 
-    def play_audio(self, filename):
-        """等待播报结束后再继续状态机，避免下一段导航与播报重叠。"""
-        if rospy.is_shutdown():
-            raise rospy.ROSInterruptException("Audio interrupted by shutdown")
-        path = os.path.join(AUDIO_DIR, filename)
-        if not os.path.exists(path):
-            rospy.logwarn("语音文件不存在: %s", path)
-            return
-        proc = None
-        try:
-            proc = subprocess.Popen(["play", path])
-            rospy.loginfo("开始播报，等待播放完成: %s", filename)
-            while proc.poll() is None:
-                if rospy.is_shutdown():
-                    raise rospy.ROSInterruptException("Audio interrupted by shutdown")
-                # 使用墙上时间，避免 ROS 仿真时钟暂停时无法响应停止。
-                time.sleep(0.05)
-            if rospy.is_shutdown():
-                raise rospy.ROSInterruptException("Audio interrupted by shutdown")
-            if proc.returncode != 0:
-                rospy.logwarn("语音播放失败: %s, exit=%s", path, proc.returncode)
-            else:
-                rospy.loginfo("播报完成: %s", filename)
-        finally:
-            # 停止任务时结束播放器，避免主任务退出后仍继续播报。
-            if proc is not None and proc.poll() is None:
-                proc.terminate()
-                deadline = time.time() + 0.5
-                while proc.poll() is None and time.time() < deadline:
-                    time.sleep(0.05)
-                if proc.poll() is None:
-                    proc.kill()
-                proc.wait()
-
     def announce_pickup_result(self, window_code):
         """发布并播报从 A/B/C 取到的样本组合。"""
         lab_info = LAB_INFO[self.windows_1234]
@@ -839,7 +804,7 @@ class MoveBaseSquare(object):
             lab_info["sample_name"]
         )
 
-        self.play_audio("%s%s.wav" % (lab_info["pickup_audio_prefix"], window_code))
+        play_audio("%s%s.wav" % (lab_info["pickup_audio_prefix"], window_code))
 
     def announce_delivery_result(self):
         """到达最终化验窗口后，根据样本数量播报。"""
@@ -849,7 +814,7 @@ class MoveBaseSquare(object):
             lab_info["lab_name"],
             self.windows_count
         )
-        self.play_audio("%s%d.wav" % (lab_info["delivery_audio_prefix"], self.windows_count))
+        play_audio("%s%d.wav" % (lab_info["delivery_audio_prefix"], self.windows_count))
 
     def detect_board1_result(self, msg):
         """识别板一回调：只在状态 10 时更新任务参数。"""

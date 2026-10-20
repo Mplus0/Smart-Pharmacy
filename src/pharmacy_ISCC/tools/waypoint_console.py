@@ -27,7 +27,7 @@ except NameError:
     read_input = input
 
 
-from pharmacy_iscc.navigation_guard import (
+from pharmacy_iscc.navigation_utils import (
     NavigationGuard, finite, target_pose, quaternion_yaw, grid_identity, validate_target)
 
 

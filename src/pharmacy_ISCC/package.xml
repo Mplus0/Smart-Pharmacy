@@ -2,7 +2,7 @@
 <package format="3">
   <name>pharmacy_ISCC</name>
   <version>0.1.0</version>
-  <description>Smart pharmacy competition nodes and maintenance tools extracted from pharmacy_pkg.</description>
+  <description>Smart pharmacy ROS1 nodes, shared detectors, YAML configuration and maintenance tools.</description>
   <maintainer email="EPRobot@todo.todo">EPRobot</maintainer>
   <!-- Original package has not specified a license. -->
   <license>TODO</license>
@@ -35,7 +35,6 @@
   <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-numpy</exec_depend>
   <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-opencv</exec_depend>
   <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-openpyxl</exec_depend>
-  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-enum34</exec_depend>
   <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-rospkg</exec_depend>
   <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-yaml</exec_depend>
   <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-numpy</exec_depend>

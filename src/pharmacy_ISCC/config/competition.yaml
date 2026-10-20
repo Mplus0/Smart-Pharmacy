@@ -1,0 +1,98 @@
+{
+    "topics": {
+        "cmd_vel": "/cmd_vel",
+        "cam_return": "/cam_return",
+        "board2_return": "/board2_return",
+        "nav_state": "/nav_state",
+        "referee_task": "/referee_task",
+        "referee_cv1": "/referee_cv1",
+        "referee_cv2": "/referee_cv2",
+        "round_done": "/dual_car/round_done",
+        "peer_done": "/dual_car/peer_done",
+        "odom": "/odometry/filtered",
+        "clear_costmaps_service": "/move_base/clear_costmaps",
+        "move_base_action": "move_base",
+    },
+
+    "states": {
+        "WAIT_TURN": 8,
+        "GO_TO_BOARD1": 9,
+        "BOARD1_RECOGNIZING": 10,
+        "GO_TO_PICKUP_WINDOWS": 11,
+        "GO_TO_BOARD2": 12,
+        "BOARD2_RECOGNIZING": 13,
+        "GO_TO_LAB_WINDOW": 14,
+        "GO_BACK_HOME": 15,
+    },
+
+    "nav": {
+        "state_machine_rate_hz": 5,
+        "wait_result_rate_hz": 10,
+        "move_timeout_sec": 90,
+        # 0 表示沿用旧逻辑：一直等待。建议调试期设 20~60，避免识别节点异常时状态机永久卡死。
+        "board1_wait_timeout_sec": 30,
+        "board2_wait_timeout_sec": 5,
+        "move_base_wait_server_sec": 60,
+        "pickup_task_hold_sec": 0.5,
+        "lab_task_hold_sec": 0.5,
+        "post_clear_costmap_sleep_sec": 0.5,
+        "home_arrive_sleep_sec": 0.1,
+        "cv_publish_repeat": 3,
+        "cv_publish_interval_sec": 0.05,
+        "dual_publish_repeat": 1,
+        "dual_publish_interval_sec": 0.10,
+        "euler_angles": [
+            1.5707963267948966, 1.5707963267948966, 1.5707963267948966,
+            -1.5707963267948966, -1.5707963267948966, -1.5707963267948966, -1.5707963267948966,
+            0.0, -3.141592653589793, 0.0,
+        ],
+        # waypoint 顺序必须保持旧代码约定：0=C,1=A,2=B,3=4号,4=3号,5=2号,6=1号,7=起点,8=板2,9=板1
+        "waypoints": {
+            "C": [1.400, 1.900, 0],
+            "A": [0.600, 2.400, 1],
+            "B": [1.400, 2.800, 2],
+            "lab4": [-1.600, 0.900, 3],
+            "lab3": [-2.400, 1.500, 4],
+            "lab2": [-1.600, 1.700, 5],
+            "lab1": [-2.400, 2.400, 6],
+            "board2": [-1.700, 3.700, 8],
+            "board1": [0.650, 0.000, 9],
+        },
+    },
+
+    "referee": {
+        "server_ip": "192.168.124.11",
+        "server_port": 8888,
+        "send_rate_hz": 2,
+        "socket_timeout_sec": 3.0,
+        "reconnect_sleep_sec": 0.5,
+        "valid_tasks": ["R", "A", "B", "C", "1", "2", "3", "4"],
+    },
+
+    "dual_tcp": {
+        "local_host": "0.0.0.0",
+        "socket_timeout_sec": 2.0,
+        "retry_interval_sec": 0.20,
+        "send_duration_sec": 3.0,
+        "peer_done_publish_repeat": 3,
+        "peer_done_publish_interval_sec": 0.05,
+        "server_accept_timeout_sec": 1.0,
+        "client_recv_timeout_sec": 2.0,
+        "max_line_chars": 2048,
+        # null 表示不校验口令；如现场网络不可信，可设置同一个字符串，例如 "race-secret"。
+        "shared_token": null, # 作用是在双方都设置了相同字符串时，TCP 消息里会携带这个口令，接收方验证不通过就丢弃消息；调试时可改 null 以简化流程，但正式比赛建议设置以防误连。
+        # true 时只接受 PEER_IP 发来的 done。若现场 IP 会漂移，可临时改 false。
+        "check_peer_ip": true,
+    },
+
+    "lab_info": {
+        3: {"real_window": 4, "sample_name": "血浆", "pickup_audio_prefix": "xuejiang", "delivery_audio_prefix": "jisu", "lab_name": "激素检验窗口"},
+        2: {"real_window": 3, "sample_name": "组织", "pickup_audio_prefix": "zuzhi", "delivery_audio_prefix": "mianyi", "lab_name": "免疫检验窗口"},
+        1: {"real_window": 2, "sample_name": "唾液", "pickup_audio_prefix": "tuoye", "delivery_audio_prefix": "tiye", "lab_name": "体液检验窗口"},
+        0: {"real_window": 1, "sample_name": "静脉血", "pickup_audio_prefix": "jingmaixue", "delivery_audio_prefix": "xuechanggui", "lab_name": "血常规检验窗口"},
+    },
+
+    "window_log_name": {
+        "A": "a", "B": "b", "C": "c", "AB": "a、b", "AC": "a、c", "BC": "b、c", "ABC": "a、b、c",
+    },
+}

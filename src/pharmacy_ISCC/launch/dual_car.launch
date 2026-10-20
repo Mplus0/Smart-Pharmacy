@@ -3,9 +3,8 @@
   <arg name="car_id" default="1"/>
   <arg name="max_rounds" default="1"/>
   <arg name="start_referee" default="false"/>
-  <include file="$(find pharmacy_ISCC)/launch/pharmacy_main_no_referee.launch">
+  <include file="$(find pharmacy_ISCC)/launch/pharmacy_main.launch">
     <arg name="car_id" value="$(arg car_id)"/>
-    <arg name="start_base" value="false"/>
     <arg name="start_dual_tcp" value="true"/>
     <arg name="enable_dual_car" value="true"/>
     <arg name="max_rounds" value="$(arg max_rounds)"/>

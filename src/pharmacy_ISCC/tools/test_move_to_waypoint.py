@@ -26,7 +26,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_srvs.srv import Empty
 from tf.transformations import quaternion_from_euler
 
-from pharmacy_iscc.dual_car_config import COMMON, get_car_config, get_car_id
+from pharmacy_iscc.config import COMMON, get_car_config, get_car_id
 
 
 STATUS_TEXT = {

@@ -1,0 +1,69 @@
+{
+    "board1": {
+        "approx_poly_dp_epsilon": 0.02,
+        "wh_rate": 0.4,
+        "min_area": 500,
+        "max_area": 20000,
+        "min_center_distance": 20,
+        "locator_min": 44,
+        "locator_max": 60,
+        "result_min": 20,
+        "stable_frames": 3,
+        "publish_all_text": true,
+        "share_all_text_topic": "/board1_all_text",
+        "peer_all_text_topic": "/dual_car/peer_board1_all_text",
+
+        # v2识别策略：先找4个大窗口框，再逐窗口轻量解码；二维码数量允许为0~4。
+        "window_detect_enable": true,
+        "window_min_area": 2500,
+        "window_max_area": 80000,
+        "window_square_wh_rate": 0.45,
+        "window_dedup_distance": 55,
+        "window_inner_margin_rate": 0.16,
+        "window_warp_size": 240,
+        "window_complete_from_three": false,
+        "require_four_windows": true,  # Publish only after all four real borders are found.
+        "window_grid_max_normalized_score": 0.75,
+
+        # 直接扫整图二维码只作为兜底：必须看到4个二维码才排序，少于4个不猜窗口。
+        "direct_decode_enable": false,
+        "direct_min_qr_count": 4,
+        "direct_dedup_distance": 45,
+    },
+
+    "board2": {
+        # tcp：从键盘服务端获取结果；vision：使用下方模板识别配置。
+        "result_source": "tcp",
+        "tcp_default_label": "free",  # Default when no valid TCP result is available.
+        "tcp_host": "192.168.124.24",  # 修改为运行键盘服务端的电脑地址。
+        "tcp_port": 9100,
+        "tcp_timeout_sec": 1.0,
+        "tcp_retry_interval_sec": 0.2,
+        "match_threshold": 0.68,
+        "stable_frames": 2,
+        "score_margin": 0.08,
+        "publish_interval": 0.5,
+        "roi": [0.0, 0.0, 1.0, 1.0],
+        "template_scales": [0.85, 0.95, 1.0, 1.05, 1.15],
+        # 调试时可改成 "busy_5" / "free" 等；正式比赛必须为 null，才会启用真实模板匹配。
+        "force_label_for_debug": null,
+        "force_score_for_debug": 1.0,
+    },
+
+    "detect": {
+        "frame_rotate_angle": 0,
+        # 板一识别阶段提高处理频率；ROS topic 模式下不会再依赖 HTTP 旧帧丢弃。
+        "drop_frame_count": 2,
+        "limit_rate_hz": 6,
+        "idle_grab_sleep_sec": 0.1,
+        "camera_reconnect_sleep_sec": 1.0,
+
+        # 图像输入源：默认直接订阅 ROS Image，HTTP 视频流仅作为兜底。
+        # 可选："ros_topic" / "http" / "ros_compressed"。
+        "image_source": "ros_topic",
+        "camera_topic": "/camera/rgb/image_raw",
+        "camera_fallback_to_http": true, # 是否允许 ROS 图像源异常时自动切换到 HTTP 视频流；调试时可改 false 强制使用 HTTP。
+        "camera_max_age_sec": 0.5,
+        "ros_image_buff_size": 16777216,
+    },
+}

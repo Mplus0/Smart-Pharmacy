@@ -27,7 +27,7 @@ import time
 import rospy
 from std_msgs.msg import Int32MultiArray, String
 
-from pharmacy_iscc.dual_car_config import COMMON, get_car_config, get_car_id
+from pharmacy_iscc.config import COMMON, get_car_config, get_car_id
 
 CAR_ID = get_car_id(default=1)
 CAR_CONFIG = get_car_config(CAR_ID)

@@ -11,7 +11,7 @@ from contextlib import closing
 import rospy
 
 
-from pharmacy_iscc.package_paths import records_path
+from pharmacy_iscc.config import records_path
 
 
 LOG_DIR = records_path()

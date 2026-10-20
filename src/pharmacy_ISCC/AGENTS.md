@@ -1,47 +1,54 @@
-# 任务：重构 pharmacy_ISCC
+# pharmacy_ISCC 维护约束
 
-请以当前仓库中的 `pharmacy_pkg/` 为唯一代码来源，重新建立 `pharmacy_ISCC/`。不要依赖旧版 `pharmacy_ISCC` 的代码架构，也不要直接复制旧版重构代码。
+以当前 pharmacy_ISCC 为修改起点、相邻 pharmacy_pkg 为业务逻辑基线。保留有效迁移，
+不恢复历史旧版实现，不修改 pharmacy_pkg 或其他功能包，不提交 Git。
 
-## 一、重构要求
+## 固定文件结构
 
-1. 首先全面阅读 `pharmacy_pkg/`，梳理实际运行逻辑、ROS 节点、状态机、视觉识别、双车通信、裁判通信、配置及资源依赖。
-2. 保持原有业务功能和运行行为不变，不擅自修改算法、参数、延时、通信协议及消息格式。
-3. 采用精简结构，不创建嵌套的 `src/`，不进行过度拆分。
+根目录仅保留 .gitattributes、README.md、AGENTS.md、CMakeLists.txt、package.xml、
+setup.py 及以下目录；不额外增加模块。
 
-## 二、目标目录
+- scripts：__init__.py、F1_detect_code_v5.py、board1_detector.py、board2_detector.py、
+  board2_tcp.py、F1_yaofang_v5.py、audio.py、tcp_link_v2.py、referee_client_v3.py、
+  config.py、recognition_records.py、navigation_utils.py。
+- tools：waypoint_console.py、record_waypoint.py、test_move_to_waypoint.py。
+- launch：base_system.launch、pharmacy_main.launch、single_car.launch、dual_car.launch、
+  referee_only.launch、detect.launch、test_move_to_waypoint.launch、ar_marker_detection.launch。
+- config：competition.yaml、vehicles.yaml、vision.yaml。
+- resources：audio/ 中的 WAV、board2_templates/ 中的 PNG。
 
-```text
-pharmacy_ISCC/
-├── README.md
-├── AGENTS.md
-├── CMakeLists.txt
-├── package.xml
-├── setup.py
-├── scripts/       # 正式比赛所需的全部代码
-├── tools/         # 调试、航点记录及单点导航测试工具
-├── launch/        # 基础系统、比赛业务、单车、双车及调试入口
-├── config/        # 必要的 YAML 配置
-└── resources/     # 语音、模板等必要资源
-```
+不保留嵌套 src、docs、tests、compitation_para.yaml、旧模块或旧 Launch 别名。
+完整目录树和迁移映射见 README.md。
 
-## 三、具体要求
+## 模块边界
 
-- `scripts/`：放置正式比赛所需的全部代码，包括视觉识别、任务选择、导航状态机、双车 TCP、裁判通信、板二 TCP、配置读取、语音播报、MD5 与记录功能。
-- `tools/`：仅放置调试和维护工具，不允许正式比赛代码依赖该目录。
-- `launch/`：基础系统与比赛业务分开启动；提供单车、双车、独立视觉调试、单点导航测试及裁判通信入口。检查现有 AR 标签检测功能后决定如何保留。
-- `config/`：仅保留实际运行需要的配置，删除历史遗留的 `compitation_para.yaml`，不得将其延时参数重新接入业务。
-- `resources/`：从实际运行代码中确认并提取必要资源，保持语音及板二模板的用途。
-- 不保留 `docs/` 和 `tests/` 目录。
-- 更新 `CMakeLists.txt`、`package.xml`、`setup.py` 和 `README.md`，保证 ROS1 下的脚本安装、导入、资源路径及启动方式正确。
+视觉节点拥有唯一图像输入、识别状态和发布器；板一/板二算法复用输入帧，不能再开相机。
+board1_detector 合并原选择函数，保留稳定发布回调和历史队列的调用顺序。
+board2_tcp 是查询客户端，不是 ROS 节点；保留实时取消检查和节点侧访问序号检查。
+主状态机保留导航和任务调度；audio 负责原播放机制；navigation_utils 供正式代码和
+工具共同使用。正式代码不得反向导入 tools，不重复实现同一功能。
 
-## 四、执行与验收
+config.py 统一加载三个 YAML，提供 COMMON、CARS、车辆选择及路径接口；业务参数
+仅在对应 YAML 维护，必要 tuple 类型由读取端恢复。ROS 包名 pharmacy_ISCC、Python
+命名空间 pharmacy_iscc 不变，通过 setup.py 把 scripts 映射为包，无嵌套源码目录。
 
-1. 先梳理 `pharmacy_pkg/` 的实际运行逻辑及文件依赖，再实施重构。
-2. 只迁移和整理必要代码，删除未使用文件前先检查引用关系。
-3. 不修改 `pharmacy_pkg/`，不影响原功能包。
-4. 检查 Python 导入、脚本权限、Launch 引用、配置及资源路径。
-5. 在环境允许时执行语法检查和 catkin 构建；无法进行实车验证时明确说明。
+## 行为约束
 
-完成后输出最终目录树、主要文件职责、删除及迁移清单、验证结果和未解决问题。
+不得调整算法、状态编号、航点顺序、阈值、超时、等待、语音映射、协议或消息格式。
+保留板一样本数量优先、同分原窗口顺序和整板队列；单车缓存和双车令牌逻辑不变。
+板二默认 TCP，GET 加换行、一行 JSON、无有效结果默认 free；vision 模式保留模板。
+保留双车 TCP 字段、重发、去重、IP/token 检查；保留裁判字段、发送频率和重连。
+保留 JSON/UTF-8 MD5、SQLite 表结构和记录时机、Excel 格式与覆盖策略。
+全部 WAV/PNG 保留，不迁移历史数据库/报表。
 
-**核心原则：从 `pharmacy_pkg/` 提取真实功能，重新构建精简的 `pharmacy_ISCC/`，保证功能等价，不额外增加复杂度。**
+基础系统与业务分开启动：基础启动、定位确认、业务启动、/nav_pharmacy/start 放行。
+保留视觉 3 秒/导航 6 秒启动延时、各入口重启策略及双车开关语义；基础差异通过
+base_system 参数表达。独立视觉保留话题隔离；AR 参数、话题和 TF 保持原值。
+
+## 检查与交付
+
+先检查引用再迁移或删除。静态对照 pharmacy_pkg，核对导入、配置键/类型、资源、
+Launch XML/传参及 catkin 安装规则。开发机无运行环境，本次只编辑和静态检查，不
+运行项目、测试、语法编译或构建。后续仅在用户授权且环境具备时进行运行验证。
+如实报告未验证内容，不将文本一致性表述为实车功能验收。更新 README 的实际目录、
+迁移清单及新启动命令，保持 LF。

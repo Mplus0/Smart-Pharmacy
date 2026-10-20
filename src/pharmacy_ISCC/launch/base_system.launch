@@ -1,6 +1,6 @@
 <launch>
   <!--
-    base_camera_nav.launch — 基础系统启动文件
+    base_system.launch — 基础系统启动文件
 
     将底盘、导航、摄像头和 web_video_server 的启动整合到一起，
     不启动任何智慧药房业务节点。
@@ -25,17 +25,20 @@
   <arg name="start_video_server" default="true" doc="启动 web_video_server"/>
   <arg name="use_race_init"      default="true" doc="使用 robot_race_init.launch 替代 robot_navigation.launch"/>
 
+  <arg name="open_rviz" default="false"/>
+  <arg name="output" default="screen"/>
+
   <!-- ── 导航（底盘 + 激光雷达 + 定位 + move_base + EKF）─ -->
   <group if="$(arg start_navigation)">
     <include unless="$(arg use_race_init)"
              file="$(find robot_navigation)/launch/robot_navigation.launch">
       <arg name="planner" value="teb"/>
-      <arg name="open_rviz" value="false"/>
+      <arg name="open_rviz" value="$(arg open_rviz)"/>
     </include>
     <include if="$(arg use_race_init)"
              file="$(find robot_navigation)/launch/robot_race_init.launch">
       <arg name="planner" value="teb"/>
-      <arg name="open_rviz" value="false"/>
+      <arg name="open_rviz" value="$(arg open_rviz)"/>
     </include>
   </group>
 
@@ -48,7 +51,7 @@
   <group if="$(arg start_video_server)">
     <node name="web_video_server"
           pkg="web_video_server" type="web_video_server"
-          output="screen"/>
+          output="$(arg output)"/>
   </group>
 
 </launch>

@@ -5,6 +5,8 @@ find_package(catkin REQUIRED)
 catkin_python_setup()
 catkin_package()
 
+# Only ROS node/tool entry points are executable programs. setup.py installs
+# the flat scripts/ package, including both detectors and the board2 TCP client.
 # catkin creates executable devel relays and installs executable node scripts.
 catkin_install_python(PROGRAMS
   scripts/F1_detect_code_v5.py

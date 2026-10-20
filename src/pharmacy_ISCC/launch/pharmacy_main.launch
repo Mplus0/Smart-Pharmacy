@@ -1,14 +1,14 @@
 <launch>
   <!--
-    pharmacy_main_no_referee.launch
+    pharmacy_main.launch
     主业务启动文件：不启动裁判通信节点，避免裁判通信高频日志刷屏。
 
     推荐启动：
       一号车主业务：
-        roslaunch pharmacy_ISCC pharmacy_main_no_referee.launch car_id:=1
+        roslaunch pharmacy_ISCC pharmacy_main.launch car_id:=1
 
       二号车主业务：
-        roslaunch pharmacy_ISCC pharmacy_main_no_referee.launch car_id:=2
+        roslaunch pharmacy_ISCC pharmacy_main.launch car_id:=2
 
     裁判通信请另开终端启动：
         roslaunch pharmacy_ISCC referee_only.launch car_id:=1
@@ -19,13 +19,6 @@
   <arg name="max_rounds" default="1"/>
   <arg name="car_id" default="1" doc="车辆编号：1 或 2"/>
   <arg name="output" default="screen" doc="节点日志输出：screen 或 log"/>
-
-  <!-- 基础系统 -->
-  <arg name="start_base" default="false" doc="是否启动基础系统"/>
-  <arg name="start_navigation" default="true" doc="是否启动 robot_navigation / robot_race_init"/>
-  <arg name="start_camera" default="true" doc="是否启动 Astra 摄像头驱动"/>
-  <arg name="start_video_server" default="true" doc="是否启动 web_video_server"/>
-  <arg name="use_race_init" default="true" doc="true 使用 robot_race_init.launch；false 使用 robot_navigation.launch"/>
 
   <!-- 主业务节点 -->
   <arg name="start_dual_tcp" default="true" doc="启动双车 TCP 通信节点"/>
@@ -44,15 +37,6 @@
   <arg name="dual_publish_repeat" default="3"/>
   <arg name="dual_publish_interval" default="0.10"/>
 
-  <!-- =========================================================
-       基础系统：底盘 + 导航 + 摄像头驱动 + HTTP 视频流
-       ========================================================= -->
-  <include if="$(arg start_base)" file="$(find pharmacy_ISCC)/launch/base_camera_nav.launch">
-    <arg name="start_navigation" value="$(arg start_navigation)"/>
-    <arg name="start_camera" value="$(arg start_camera)"/>
-    <arg name="start_video_server" value="$(arg start_video_server)"/>
-    <arg name="use_race_init" value="$(arg use_race_init)"/>
-  </include>
   <!-- 双车 TCP 先启动 -->
   <node if="$(arg start_dual_tcp)"
         name="dual_car_tcp_link"
