@@ -11,7 +11,7 @@
   <arg name="output" default="screen"/>
 
   <node name="test_move_to_waypoint"
-        pkg="pharmacy_iscc"
+        pkg="pharmacy_ISCC"
         type="test_move_to_waypoint.py"
         output="$(arg output)">
     <env name="CAR_ID" value="$(arg car_id)"/>

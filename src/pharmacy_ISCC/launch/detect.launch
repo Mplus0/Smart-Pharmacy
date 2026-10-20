@@ -1,3 +1,16 @@
 <launch>
-    <node name="pharmacy_iscc" pkg="pharmacy_iscc" type="F1_detect_code_v5.py" cwd="node" />
+  <!-- Standalone recognition; results/state are isolated from competition. -->
+  <arg name="car_id" default="1"/>
+  <arg name="state" default="10" doc="10: board1; 13: board2 (configured TCP or vision source)"/>
+  <node pkg="rostopic" type="rostopic" name="vision_debug_state"
+        args="pub -l /pharmacy_vision_debug/nav_state std_msgs/Int32 'data: $(arg state)'"/>
+  <node pkg="pharmacy_ISCC" type="F1_detect_code_v5.py"
+        name="vision_debug" output="screen">
+    <env name="CAR_ID" value="$(arg car_id)"/>
+    <env name="PHARMACY_RECORD_DIR" value="$(env HOME)/.ros/pharmacy_ISCC/vision_debug"/>
+    <remap from="/nav_state" to="/pharmacy_vision_debug/nav_state"/>
+    <remap from="/cam_return" to="/pharmacy_vision_debug/cam_return"/>
+    <remap from="/board2_return" to="/pharmacy_vision_debug/board2_return"/>
+    <remap from="/board1_all_text" to="/pharmacy_vision_debug/board1_all_text"/>
+  </node>
 </launch>

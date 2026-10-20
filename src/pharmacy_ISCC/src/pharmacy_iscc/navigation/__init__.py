@@ -1,1 +1,0 @@
-"""Pharmacy ISCC navigation components."""

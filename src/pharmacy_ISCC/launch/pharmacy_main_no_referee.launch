@@ -5,14 +5,14 @@
 
     推荐启动：
       一号车主业务：
-        roslaunch pharmacy_iscc pharmacy_main_no_referee.launch car_id:=1
+        roslaunch pharmacy_ISCC pharmacy_main_no_referee.launch car_id:=1
 
       二号车主业务：
-        roslaunch pharmacy_iscc pharmacy_main_no_referee.launch car_id:=2
+        roslaunch pharmacy_ISCC pharmacy_main_no_referee.launch car_id:=2
 
     裁判通信请另开终端启动：
-        roslaunch pharmacy_iscc referee_only.launch car_id:=1
-        roslaunch pharmacy_iscc referee_only.launch car_id:=2
+        roslaunch pharmacy_ISCC referee_only.launch car_id:=1
+        roslaunch pharmacy_ISCC referee_only.launch car_id:=2
   -->
 
   <arg name="enable_dual_car" default="false"/>
@@ -21,7 +21,7 @@
   <arg name="output" default="screen" doc="节点日志输出：screen 或 log"/>
 
   <!-- 基础系统 -->
-  <arg name="start_base" default="true" doc="是否启动基础系统"/>
+  <arg name="start_base" default="false" doc="是否启动基础系统"/>
   <arg name="start_navigation" default="true" doc="是否启动 robot_navigation / robot_race_init"/>
   <arg name="start_camera" default="true" doc="是否启动 Astra 摄像头驱动"/>
   <arg name="start_video_server" default="true" doc="是否启动 web_video_server"/>
@@ -47,37 +47,16 @@
   <!-- =========================================================
        基础系统：底盘 + 导航 + 摄像头驱动 + HTTP 视频流
        ========================================================= -->
-  <group if="$(arg start_base)">
-    <group if="$(arg start_navigation)">
-      <include unless="$(arg use_race_init)"
-               file="$(find robot_navigation)/launch/robot_navigation.launch">
-        <arg name="planner" value="teb"/>
-        <arg name="open_rviz" value="false"/>
-      </include>
-
-      <include if="$(arg use_race_init)"
-               file="$(find robot_navigation)/launch/robot_race_init.launch">
-        <arg name="planner" value="teb"/>
-        <arg name="open_rviz" value="false"/>
-      </include>
-    </group>
-
-    <group if="$(arg start_camera)">
-      <include file="$(find astra_camera)/launch/astra.launch"/>
-    </group>
-
-    <group if="$(arg start_video_server)">
-      <node name="web_video_server"
-            pkg="web_video_server"
-            type="web_video_server"
-            output="$(arg output)"/>
-    </group>
-  </group>
-
+  <include if="$(arg start_base)" file="$(find pharmacy_ISCC)/launch/base_camera_nav.launch">
+    <arg name="start_navigation" value="$(arg start_navigation)"/>
+    <arg name="start_camera" value="$(arg start_camera)"/>
+    <arg name="start_video_server" value="$(arg start_video_server)"/>
+    <arg name="use_race_init" value="$(arg use_race_init)"/>
+  </include>
   <!-- 双车 TCP 先启动 -->
   <node if="$(arg start_dual_tcp)"
         name="dual_car_tcp_link"
-        pkg="pharmacy_iscc"
+        pkg="pharmacy_ISCC"
         type="tcp_link_v2.py"
         output="$(arg output)"
         respawn="$(arg respawn_comm)">
@@ -87,7 +66,7 @@
   <!-- 视觉识别节点后启动，但早于药房状态机 -->
   <node if="$(arg start_detect)"
         name="detect_abc"
-        pkg="pharmacy_iscc"
+        pkg="pharmacy_ISCC"
         type="F1_detect_code_v5.py"
         output="$(arg output)"
         respawn="$(arg respawn_detect)"
@@ -98,7 +77,7 @@
   <!-- 药房导航状态机最后启动 -->
   <node if="$(arg start_nav_pharmacy)"
         name="nav_pharmacy"
-        pkg="pharmacy_iscc"
+        pkg="pharmacy_ISCC"
         type="F1_yaofang_v5.py"
         output="$(arg output)"
         respawn="$(arg respawn_nav_pharmacy)"

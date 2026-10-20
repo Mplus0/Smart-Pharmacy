@@ -4,10 +4,10 @@
     裁判通信单独启动文件。
 
     一号车：
-      roslaunch pharmacy_iscc referee_only.launch car_id:=1
+      roslaunch pharmacy_ISCC referee_only.launch car_id:=1
 
     二号车：
-      roslaunch pharmacy_iscc referee_only.launch car_id:=2
+      roslaunch pharmacy_ISCC referee_only.launch car_id:=2
 
     说明：
       这个 launch 只启动 referee_client_v3.py。
@@ -19,7 +19,7 @@
   <arg name="respawn_referee" default="true"/>
 
   <node name="referee_client_node"
-        pkg="pharmacy_iscc"
+        pkg="pharmacy_ISCC"
         type="referee_client_v3.py"
         output="$(arg output)"
         respawn="$(arg respawn_referee)">

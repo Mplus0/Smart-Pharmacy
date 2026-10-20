@@ -1,11 +1,16 @@
 <launch>
-  <!-- Explicit two-car mode; run on each car with its own car_id and ROS master. -->
+  <!-- Run once on EACH vehicle, using separate ROS masters and car_id 1 / 2. -->
   <arg name="car_id" default="1"/>
   <arg name="max_rounds" default="1"/>
-  <include file="$(find pharmacy_iscc)/launch/pharmacy_main_no_referee.launch">
+  <arg name="start_referee" default="false"/>
+  <include file="$(find pharmacy_ISCC)/launch/pharmacy_main_no_referee.launch">
     <arg name="car_id" value="$(arg car_id)"/>
     <arg name="start_base" value="false"/>
+    <arg name="start_dual_tcp" value="true"/>
     <arg name="enable_dual_car" value="true"/>
     <arg name="max_rounds" value="$(arg max_rounds)"/>
+  </include>
+  <include if="$(arg start_referee)" file="$(find pharmacy_ISCC)/launch/referee_only.launch">
+    <arg name="car_id" value="$(arg car_id)"/>
   </include>
 </launch>

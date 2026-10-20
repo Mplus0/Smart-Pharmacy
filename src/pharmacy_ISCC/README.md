@@ -1,152 +1,171 @@
-# 智慧药房代码重构包
+# pharmacy_ISCC
 
-本目录是现有 `Smart-Pharmacy` catkin 工作空间中的功能包，**不是独立工作空间**。
-按用户最后指令，保存路径为 `Smart-Pharmacy/src/pharmacy_ISCC/`。
-文件夹名为 `pharmacy_ISCC`，ROS 包名及 Python 包名均为 `pharmacy_iscc`；
-因此使用 `roslaunch pharmacy_iscc ...`，不要用文件夹名作 ROS 包名。
+基于 `pharmacy_pkg` 重构的 ROS1 智慧药房功能包。保持原有业务逻辑，规范代码结构、资源路径及启动入口。
 
-功能基线为相邻 `pharmacy_pkg/scripts/` 的当前版本；原包不修改。
-重构只调整模块、导入、资源定位、配置存储及失效启动引用，保持业务流程。
-本次开发机没有 ROS/catkin 和机器人环境，构建、真实 ROS 通信、图像识别及实车运行均待验证。
-
-## 目录
+## 目录结构
 
 ```text
-Smart-Pharmacy/
-├── src/CMakeLists.txt              # 现有工作空间顶层文件，不修改
-└── src/pharmacy_ISCC/
-    ├── CMakeLists.txt              # 功能包构建/安装规则
-    ├── package.xml
-    ├── setup.py
-    ├── launch/
-    ├── config/                    # competition.yaml / vehicles.yaml / vision.yaml
-    ├── scripts/                   # 7 个薄入口，保留当前脚本文件名
-    ├── src/pharmacy_iscc/
-    │   ├── common/                # 共用数值工具
-    │   ├── config/                # 配置加载、资源定位
-    │   ├── perception/            # 图像输入、板一、板二、稳定发布
-    │   ├── navigation/            # 状态机、语音、航点工具
-    │   ├── communication/         # 双车、裁判、板二 GET
-    │   └── recording/             # SQLite、MD5、Excel
-    ├── resources/                 # audio/、board2_templates/
-    ├── tests/                     # unit/、integration/、fixtures/
-    └── docs/                      # 架构、接口、迁移、验收及历史资料
+pharmacy_ISCC/
+├── .gitattributes
+├── README.md
+├── AGENTS.md
+├── CMakeLists.txt
+├── package.xml
+├── setup.py
+├── scripts/                         # 正式比赛代码
+│   ├── __init__.py
+│   ├── F1_detect_code_v5.py         # 视觉识别与结果发布
+│   ├── F1_yaofang_v5.py             # 主状态机、导航与任务调度
+│   ├── board1_selection.py          # 板一任务选择与队列生成
+│   ├── dual_car_config.py           # 公共参数与车辆配置
+│   ├── navigation_guard.py          # 地图、定位与目标校验
+│   ├── package_paths.py             # 配置、资源及记录路径管理
+│   ├── recognition_records.py       # MD5、SQLite 与 Excel 记录
+│   ├── referee_client_v3.py         # 裁判通信与状态上报
+│   └── tcp_link_v2.py               # 双车 TCP 通信与任务共享
+├── tools/                           # 调试与维护工具
+│   ├── record_waypoint.py           # 航点记录
+│   ├── test_move_to_waypoint.py     # 单点导航测试
+│   └── waypoint_console.py          # 交互式航点控制台
+├── launch/                          # ROS 启动配置
+│   ├── base_camera_nav.launch      # 基础导航与相机
+│   ├── single_car_base.launch      # 单车基础系统
+│   ├── single_car_task.launch      # 单车比赛业务
+│   ├── dual_car_task.launch        # 双车比赛业务
+│   ├── pharmacy_main_no_referee.launch # 通用业务入口
+│   ├── full_run_debug.launch       # 单车完整任务调试
+│   ├── detect.launch               # 独立视觉调试
+│   ├── referee_only.launch         # 独立裁判通信
+│   ├── test_move_to_waypoint.launch # 单点导航测试
+│   └── QRcode.launch               # 可选 AR 标签检测
+├── config/
+│   └── vehicles.yaml               # 双车编号、网络参数与起点配置
+└── resources/
+    ├── audio/                      # 语音播报 WAV 文件
+    └── board2_templates/           # 板二识别模板图片
 ```
 
-## 参数与默认行为
+## 运行方式
 
-- `config/competition.yaml`：话题、状态号、导航、双车 TCP、裁判配置及播报映射。
-- `config/vehicles.yaml`：车辆编号、对车地址、初始令牌、原点、结果共享开关。
-- `config/vision.yaml`：板一/板二识别与图像输入参数。
-- `src/pharmacy_iscc/config/settings.py` 统一加载配置，恢复原来的整数键及元组类型。
-  原 `compitation_para.yaml` 原样保留；当前主业务原本不加载它，本次也不将其接入。
-- 板二仍默认 TCP，查询无有效结果时按当前基线回退 `free`；
-  `force_label_for_debug` 仍为 `None`。图像输入默认 ROS 原始图像，并允许 HTTP 兜底。
-- 板一需四个真实窗口、连续三帧内容一致；单车通过一条消息传递整板任务；
-  双车仍只执行首项、分享整板，由对车从剩余项选择。
-- 主 Launch 的 `enable_dual_car` **原值就是 false**，保留不变。
-  TCP 节点的启动开关默认 true，与是否启用双车任务调度是两个不同参数。
-  `dual_car_task.launch` 是显式设置双车调度的新入口。
-- `max_rounds` 默认 1；0 表示持续运行。车 1 默认先发，车 2 等待令牌。
-  车辆到达化验窗口、停留且播报结束，进入状态 15 时释放令牌。
+完成 catkin 构建并 source 工作空间后执行以下命令。
 
-## 机器人侧依赖与构建（本次未执行）
+### 1. 单车比赛
 
-沿用车辆现有 ROS 发行版及其 Python 版本（原代码兼容 Melodic/Python 2）。
-不要把开发机 Python 3 的依赖覆盖到车辆 ROS Python 环境。
-
-所需 ROS 依赖已列入 `package.xml`，包括 rospy、消息包、actionlib、tf、
-cv_bridge、robot_navigation、astra_camera、web_video_server、ar_track_alvar。
-`robot_navigation` 等硬件包使用现有工作空间版本，不在本包内重新实现。
-Python 依赖包括 NumPy、OpenCV、PyYAML、rospkg、openpyxl、pyzbar；
-系统还需 zbar 共享库和 SoX 的 `play` 命令。
-
-在已安装 ROS 的 Linux 车辆/构建机：
+先启动基础系统：
 
 ```bash
-cd /实际路径/Smart-Pharmacy
-source /opt/ros/$ROS_DISTRO/setup.bash
-rosdep install --from-paths src/pharmacy_ISCC --ignore-src -r -y
-# 用当前 ROS 对应的 Python/pip 安装 pyzbar；安装系统 zbar 和播放器
-sudo apt-get install libzbar0 sox
-# Python 3 ROS：
-python3 -m pip install pyzbar
-# Python 2 ROS 使用兼容 Python 2 的版本：
-# python2 -m pip install 'pyzbar==0.1.8'
-catkin_make --pkg pharmacy_iscc
-source devel/setup.bash
-rospack find pharmacy_iscc
-python -c 'from pharmacy_iscc.config.settings import COMMON; print(COMMON["paths"])'
+roslaunch pharmacy_ISCC single_car_base.launch
 ```
 
-安装空间也应验证 `catkin_make install` 后的资源定位及节点导入。
-构建命令是交接步骤，**不代表本次已构建通过**。
-包的维护者和 `TODO` 许可证字段沿用原项目，未擅自声明许可证。
-
-## 启动
-
-每个终端先 source 现有工作空间的 `devel/setup.bash`。每辆车使用自己的 ROS Master。
-
-单车：
+另开终端启动比赛业务：
 
 ```bash
-roslaunch pharmacy_iscc single_car_base.launch
-# 在 RViz 完成定位检查后，另开终端：
-roslaunch pharmacy_iscc single_car_task.launch
-# 节点初始化且 move_base 就绪后，手动放行：
+roslaunch pharmacy_ISCC single_car_task.launch
+```
+
+手动放行任务：
+
+```bash
 rosservice call /nav_pharmacy/start '{}'
 ```
 
-双车：分别在两辆车启动基础系统并完成定位；下面车号按车辆改为 1 或 2。
+默认执行一轮整板任务。设置 `max_rounds:=0` 可连续执行：
 
 ```bash
-roslaunch pharmacy_iscc base_camera_nav.launch
-roslaunch pharmacy_iscc dual_car_task.launch car_id:=1
-roslaunch pharmacy_iscc referee_only.launch car_id:=1
+roslaunch pharmacy_ISCC single_car_task.launch max_rounds:=0
+```
+
+如需同时启动裁判通信：
+
+```bash
+roslaunch pharmacy_ISCC single_car_task.launch start_referee:=true
+```
+
+也可以独立启动裁判通信：
+
+```bash
+roslaunch pharmacy_ISCC referee_only.launch car_id:=1
+```
+
+### 2. 双车比赛
+
+两辆车分别在自己的 ROS Master 下启动基础系统：
+
+```bash
+roslaunch pharmacy_ISCC base_camera_nav.launch
+```
+
+启动业务。车 1：
+
+```bash
+roslaunch pharmacy_ISCC dual_car_task.launch car_id:=1
+```
+
+车 2：
+
+```bash
+roslaunch pharmacy_ISCC dual_car_task.launch car_id:=2
+```
+
+分别手动放行：
+
+```bash
 rosservice call /nav_pharmacy/start '{}'
 ```
 
-两车都需要手动放行；车 2 放行后仍等待令牌。需要持续运行时传 `max_rounds:=0`。
-也可使用原统一入口：
+两车通过 TCP 通信协作，车 1 先发起任务，车 2 等待令牌。默认每车执行一轮；连续执行时传入 `max_rounds:=0`。
+
+### 3. 视觉调试
+
+基础系统应提前启动，并确保相机图像源可用。
+
+测试板一：
 
 ```bash
-roslaunch pharmacy_iscc pharmacy_main_no_referee.launch car_id:=1 enable_dual_car:=true
+roslaunch pharmacy_ISCC detect.launch state:=10
+rostopic echo /pharmacy_vision_debug/cam_return
 ```
 
-此入口默认启动基础系统，不要和已经运行的基础 Launch 重复启动。
-car2 分层入口仍保留：`pharmacy_base_car2.launch`、
-`pharmacy_app_car2.launch`、`pharmacy_task_car2.launch`；
-需要双车调度时给 task 层显式传 `enable_dual_car:=true`。
-该旧任务入口节点名保持 `F1_yaofang_v4_car2`，其放行服务为
-`/F1_yaofang_v4_car2/start`。
-
-独立工具：
+检查板二：
 
 ```bash
-rosrun pharmacy_iscc waypoint_console.py --help
-rosrun pharmacy_iscc record_waypoint.py --help
-roslaunch pharmacy_iscc test_move_to_waypoint.launch target:=A dry_run:=true
+roslaunch pharmacy_ISCC detect.launch state:=13
 ```
 
-## 记录与测试
+板二默认使用 TCP 查询。如需测试本地模板识别，将 `scripts/dual_car_config.py` 中板二的 `result_source` 设置为 `vision`。
 
-记录默认写到新包的 `result_md5/`，每车 `car1.sqlite3` / `car2.sqlite3`；
-每次任务启动清空该车旧记录，结束时覆盖 `recognition.xlsx`。
-视觉与导航必须使用相同记录目录。在只读安装空间或自定义部署中，
-在所有相关终端统一设置 `PHARMACY_RECORD_DIR` 为同一个可写的绝对路径。
-原结果文件仅存于 `tests/fixtures/recording_baseline/`，不会作为新任务的活动数据库。
+### 4. 导航与航点工具
 
-开发机离线检查（Python 3，PyYAML、openpyxl）：
+航点控制台：
 
 ```bash
-cd Smart-Pharmacy/src/pharmacy_ISCC
-python tests/run_offline.py
+rosrun pharmacy_ISCC waypoint_console.py --dry-run
 ```
 
-`tests/integration/test_offline_contracts.py` 使用假的 ROS、图像库和 socket，
-只验证消息/状态/协议/记录边界，不启动节点、不连接外部服务、不控制车辆。
-历史脚本和识别数据保存在 `tests/fixtures/legacy/`；旧脚本含旧路径和过时断言，
-不纳入本次测试发现，也不将旧报告的通过状态作为本次验证。
+记录航点：
 
-详见 [架构与接口](docs/architecture.md)、[迁移清单](docs/migration.md)、
-[验收记录](docs/validation.md)。
+```bash
+rosrun pharmacy_ISCC record_waypoint.py --list --output ~/waypoints/pharmacy_points.json
+```
+
+测试前往航点 A：
+
+```bash
+roslaunch pharmacy_ISCC test_move_to_waypoint.launch car_id:=1 target:=A dry_run:=true
+```
+
+### 5. 其他入口
+
+- `pharmacy_main_no_referee.launch`：通用业务入口，默认不启动基础系统和裁判通信。
+- `full_run_debug.launch`：单车完整任务调试入口。
+- `QRcode.launch`：独立 AR 标签检测，不属于默认比赛流程。
+
+## 目录职责
+
+- `scripts/`：正式比赛节点与业务实现。
+- `tools/`：航点记录、导航测试及其他维护工具。
+- `launch/`：基础系统、比赛业务及调试入口。
+- `config/`：车辆参数配置。
+- `resources/`：语音和识别模板资源。
+
+基础地图及导航参数由外部 `robot_navigation` 管理。双车通过 TCP 协作，各自运行于独立的 ROS Master。

@@ -2,11 +2,11 @@
   <!-- Terminal 2: start only after localization has been checked in RViz. -->
   <arg name="max_rounds" default="1"/>
   <arg name="start_referee" default="false"/>
-  <include file="$(find pharmacy_iscc)/launch/full_run_debug.launch">
+  <include file="$(find pharmacy_ISCC)/launch/full_run_debug.launch">
     <arg name="max_rounds" value="$(arg max_rounds)"/>
   </include>
   <include if="$(arg start_referee)"
-           file="$(find pharmacy_iscc)/launch/referee_only.launch">
+           file="$(find pharmacy_ISCC)/launch/referee_only.launch">
     <arg name="car_id" value="1"/>
   </include>
 </launch>
