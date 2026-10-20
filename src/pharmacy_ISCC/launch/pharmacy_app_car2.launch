@@ -1,0 +1,12 @@
+<launch>
+  <!-- Current shared nodes, preserving the original car2 application-layer split. -->
+  <node pkg="pharmacy_iscc" type="tcp_link_v2.py" name="tcp_link_car2" output="screen">
+    <env name="CAR_ID" value="2"/>
+  </node>
+  <node pkg="pharmacy_iscc" type="referee_client_v3.py" name="referee_client_v2_car2" output="screen">
+    <env name="CAR_ID" value="2"/>
+  </node>
+  <node pkg="pharmacy_iscc" type="F1_detect_code_v5.py" name="F1_detect_code_v4_car2" output="screen">
+    <env name="CAR_ID" value="2"/>
+  </node>
+</launch>

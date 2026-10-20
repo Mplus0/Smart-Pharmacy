@@ -1,0 +1,9 @@
+{
+  "F1_detect_code_v5.py": "perception.runtime",
+  "F1_yaofang_v5.py": "navigation.state_machine",
+  "tcp_link_v2.py": "communication.dual_car",
+  "referee_client_v3.py": "communication.referee",
+  "record_waypoint.py": "navigation.record_waypoint",
+  "waypoint_console.py": "navigation.waypoint_console",
+  "test_move_to_waypoint.py": "navigation.test_move_to_waypoint"
+}

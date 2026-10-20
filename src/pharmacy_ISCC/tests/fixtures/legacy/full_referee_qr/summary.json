@@ -1,0 +1,2021 @@
+{
+  "isolated_cases": 68, 
+  "raw_qr_count": 17, 
+  "selection_combinations": 14641, 
+  "time": "2026-10-16T15:36:52.927951", 
+  "live_scenes": 8, 
+  "reports": [
+    {
+      "case": "all_invalid", 
+      "expected_message": null, 
+      "success": true, 
+      "expected_all_text": [
+        "ACD", 
+        "D", 
+        "https://www.hlcode.cn", 
+        ""
+      ], 
+      "nav_state_subscribers": [
+        "/board1_debug_detector"
+      ], 
+      "rounds": [
+        {
+          "all_text_messages": [], 
+          "latency_sec": 5.027, 
+          "frame_sha256": "70df7d1d761e78997765a4d130890a77fc3f204c1b276a7bb18db4620d393c7d", 
+          "visit": 1, 
+          "messages": [], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ACD", 
+            "D", 
+            "https://www.hlcode.cn", 
+            ""
+          ], 
+          "prior_seq": 37
+        }, 
+        {
+          "all_text_messages": [], 
+          "latency_sec": 5.023, 
+          "frame_sha256": "8dc18e76a37fea858e61432ba9c4e4797da6d5ce31014d44802ff7421f34bf64", 
+          "visit": 2, 
+          "messages": [], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ACD", 
+            "D", 
+            "https://www.hlcode.cn", 
+            ""
+          ], 
+          "prior_seq": 0
+        }, 
+        {
+          "all_text_messages": [], 
+          "latency_sec": 5.026, 
+          "frame_sha256": "696e9d205c26c90ba10a25bce828066942fc6022beb814a7af7afcb28d5f4e42", 
+          "visit": 3, 
+          "messages": [], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ACD", 
+            "D", 
+            "https://www.hlcode.cn", 
+            ""
+          ], 
+          "prior_seq": 0
+        }
+      ]
+    }, 
+    {
+      "case": "invalid_acd", 
+      "expected_message": [
+        1, 
+        1, 
+        1, 
+        3, 
+        1, 
+        1
+      ], 
+      "success": true, 
+      "expected_all_text": [
+        "ACD", 
+        "ABC", 
+        "", 
+        ""
+      ], 
+      "nav_state_subscribers": [
+        "/board1_debug_detector"
+      ], 
+      "rounds": [
+        {
+          "all_text_messages": [
+            {
+              "seq": 29, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 29, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 29, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.558, 
+          "frame_sha256": "efcef15a819c00adae04c3b7e7f6fc6044bb241055ac314a07d136798fbb7c08", 
+          "visit": 1, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              1, 
+              1
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ACD", 
+            "ABC", 
+            "", 
+            ""
+          ], 
+          "prior_seq": 28
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 30, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 30, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 30, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.558, 
+          "frame_sha256": "6c3b529cdeae7833559e82e71049688836c49c2f6d3f24a9315728c16b854a6f", 
+          "visit": 2, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              1, 
+              1
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ACD", 
+            "ABC", 
+            "", 
+            ""
+          ], 
+          "prior_seq": 29
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 31, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 31, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 31, 
+              "selected_index": 1, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                1, 
+                1
+              ], 
+              "all_text": [
+                "ACD", 
+                "ABC", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.407, 
+          "frame_sha256": "aeac16da874070692c6ba0d39dae514b22c84804bf1187e047a5820d5f7c14f3", 
+          "visit": 3, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              1, 
+              1
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ACD", 
+            "ABC", 
+            "", 
+            ""
+          ], 
+          "prior_seq": 30
+        }
+      ]
+    }, 
+    {
+      "case": "invalid_d", 
+      "expected_message": [
+        1, 
+        1, 
+        1, 
+        3, 
+        0, 
+        2
+      ], 
+      "success": true, 
+      "expected_all_text": [
+        "ABC", 
+        "D", 
+        "", 
+        ""
+      ], 
+      "nav_state_subscribers": [
+        "/board1_debug_detector"
+      ], 
+      "rounds": [
+        {
+          "all_text_messages": [
+            {
+              "seq": 32, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 32, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 32, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.558, 
+          "frame_sha256": "6864c1153e997a780df3a073ac4e2ad440dc7fb4a850abfab5d77ba76ab04f35", 
+          "visit": 1, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              0, 
+              2
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ABC", 
+            "D", 
+            "", 
+            ""
+          ], 
+          "prior_seq": 31
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 33, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 33, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 33, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.607, 
+          "frame_sha256": "7dab585d6d1fbb0fcb7825e79bdb8ef64ed326035114781b5ff493793615e304", 
+          "visit": 2, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              0, 
+              2
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ABC", 
+            "D", 
+            "", 
+            ""
+          ], 
+          "prior_seq": 32
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 34, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 34, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 34, 
+              "selected_index": 0, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                0, 
+                2
+              ], 
+              "all_text": [
+                "ABC", 
+                "D", 
+                "", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.507, 
+          "frame_sha256": "c702c4fa88b132d63858606f077abdc869a12bd23981c302576708a956a624b4", 
+          "visit": 3, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              0, 
+              2
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "ABC", 
+            "D", 
+            "", 
+            ""
+          ], 
+          "prior_seq": 33
+        }
+      ]
+    }, 
+    {
+      "case": "invalid_url", 
+      "expected_message": [
+        1, 
+        1, 
+        1, 
+        3, 
+        2, 
+        4
+      ], 
+      "success": true, 
+      "expected_all_text": [
+        "", 
+        "", 
+        "ABC", 
+        "https://www.hlcode.cn"
+      ], 
+      "nav_state_subscribers": [
+        "/board1_debug_detector"
+      ], 
+      "rounds": [
+        {
+          "all_text_messages": [
+            {
+              "seq": 35, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 35, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 35, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.658, 
+          "frame_sha256": "b9fe1afd13b880df736a2041c111599abd58cb6e06ee0a006b383ef6cfa01482", 
+          "visit": 1, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              4
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "", 
+            "", 
+            "ABC", 
+            "https://www.hlcode.cn"
+          ], 
+          "prior_seq": 34
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 36, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 36, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 36, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.564, 
+          "frame_sha256": "1e2dc91d1b683ae5394458fb679ccb14b35d839fb42b4e9188f84033c47b9339", 
+          "visit": 2, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              4
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "", 
+            "", 
+            "ABC", 
+            "https://www.hlcode.cn"
+          ], 
+          "prior_seq": 35
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 37, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 37, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 37, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                4
+              ], 
+              "all_text": [
+                "", 
+                "", 
+                "ABC", 
+                "https://www.hlcode.cn"
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.61, 
+          "frame_sha256": "99f7aaf9916fa7f8a128d88217ad670698faab6809f99863fbb0416e5c6b6f25", 
+          "visit": 3, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              4
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "", 
+            "", 
+            "ABC", 
+            "https://www.hlcode.cn"
+          ], 
+          "prior_seq": 36
+        }
+      ]
+    }, 
+    {
+      "case": "labelled_1", 
+      "expected_message": [
+        0, 
+        1, 
+        1, 
+        2, 
+        3, 
+        0
+      ], 
+      "success": true, 
+      "expected_all_text": [
+        "A", 
+        "B", 
+        "C", 
+        "AB"
+      ], 
+      "nav_state_subscribers": [
+        "/board1_debug_detector"
+      ], 
+      "rounds": [
+        {
+          "all_text_messages": [
+            {
+              "seq": 17, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 17, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 17, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }
+          ], 
+          "latency_sec": 0.554, 
+          "frame_sha256": "d643b82012488b60f96bd39183ccdfcbe763bb4f6d4873521324c10c1244e72e", 
+          "visit": 1, 
+          "messages": [
+            [
+              0, 
+              1, 
+              1, 
+              2, 
+              3, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "A", 
+            "B", 
+            "C", 
+            "AB"
+          ], 
+          "prior_seq": 16
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 18, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 18, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 18, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }
+          ], 
+          "latency_sec": 0.504, 
+          "frame_sha256": "c283e539c7a8dabffe55244ebc2e4ae845a4b1616703e9f5675192a9fcd37a19", 
+          "visit": 2, 
+          "messages": [
+            [
+              0, 
+              1, 
+              1, 
+              2, 
+              3, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "A", 
+            "B", 
+            "C", 
+            "AB"
+          ], 
+          "prior_seq": 17
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 19, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 19, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 19, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }
+          ], 
+          "latency_sec": 0.705, 
+          "frame_sha256": "4e33590da6eb88b90274883cf24cf79132f94edaf1d46da711881f9332626b0f", 
+          "visit": 3, 
+          "messages": [
+            [
+              0, 
+              1, 
+              1, 
+              2, 
+              3, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "A", 
+            "B", 
+            "C", 
+            "AB"
+          ], 
+          "prior_seq": 18
+        }
+      ]
+    }, 
+    {
+      "case": "labelled_2", 
+      "expected_message": [
+        1, 
+        1, 
+        1, 
+        3, 
+        2, 
+        0
+      ], 
+      "success": true, 
+      "expected_all_text": [
+        "AC", 
+        "BC", 
+        "ABC", 
+        ""
+      ], 
+      "nav_state_subscribers": [
+        "/board1_debug_detector"
+      ], 
+      "rounds": [
+        {
+          "all_text_messages": [
+            {
+              "seq": 20, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 20, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 20, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 0.856, 
+          "frame_sha256": "e11b1f5e23d897c5a0437838dbee223ec9d14774f1ea22e5c5e73d3b45ce1bc8", 
+          "visit": 1, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "AC", 
+            "BC", 
+            "ABC", 
+            ""
+          ], 
+          "prior_seq": 19
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 21, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 21, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 21, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 0.854, 
+          "frame_sha256": "9890beb7a350a41ccb61fe9b38709871eb8f25c53ecf071c52b940420914acb6", 
+          "visit": 2, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "AC", 
+            "BC", 
+            "ABC", 
+            ""
+          ], 
+          "prior_seq": 20
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 22, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 22, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 22, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 0.855, 
+          "frame_sha256": "d8969de2a2b2dffe7c6a041afb6f1dd9adb895b2a57ba7075f3b6b30b6d74da9", 
+          "visit": 3, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "AC", 
+            "BC", 
+            "ABC", 
+            ""
+          ], 
+          "prior_seq": 21
+        }
+      ]
+    }, 
+    {
+      "case": "plain_1", 
+      "expected_message": [
+        0, 
+        1, 
+        1, 
+        2, 
+        3, 
+        0
+      ], 
+      "success": true, 
+      "expected_all_text": [
+        "A", 
+        "B", 
+        "C", 
+        "AB"
+      ], 
+      "nav_state_subscribers": [
+        "/board1_debug_detector"
+      ], 
+      "rounds": [
+        {
+          "all_text_messages": [
+            {
+              "seq": 23, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 23, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 23, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }
+          ], 
+          "latency_sec": 0.504, 
+          "frame_sha256": "80d030606773f81bfb5777f6e01bdf1931e9fe0085ba67e354a0efa1f4c9c140", 
+          "visit": 1, 
+          "messages": [
+            [
+              0, 
+              1, 
+              1, 
+              2, 
+              3, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "A", 
+            "B", 
+            "C", 
+            "AB"
+          ], 
+          "prior_seq": 22
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 24, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 24, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 24, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }
+          ], 
+          "latency_sec": 0.554, 
+          "frame_sha256": "e92ed4c007a9a7b06966c5bae38840ea34974094122b3774c7aa1f6a3b0cfc1c", 
+          "visit": 2, 
+          "messages": [
+            [
+              0, 
+              1, 
+              1, 
+              2, 
+              3, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "A", 
+            "B", 
+            "C", 
+            "AB"
+          ], 
+          "prior_seq": 23
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 25, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 25, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }, 
+            {
+              "seq": 25, 
+              "selected_index": 3, 
+              "selected_msg": [
+                0, 
+                1, 
+                1, 
+                2, 
+                3, 
+                0
+              ], 
+              "all_text": [
+                "A", 
+                "B", 
+                "C", 
+                "AB"
+              ], 
+              "car_id": 1, 
+              "selected_text": "AB"
+            }
+          ], 
+          "latency_sec": 0.552, 
+          "frame_sha256": "c89e747d74ec15a9fb6c25e82d0ccd684d9ed24cebe8a61645b29a90dff6cfe7", 
+          "visit": 3, 
+          "messages": [
+            [
+              0, 
+              1, 
+              1, 
+              2, 
+              3, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "A", 
+            "B", 
+            "C", 
+            "AB"
+          ], 
+          "prior_seq": 24
+        }
+      ]
+    }, 
+    {
+      "case": "plain_2", 
+      "expected_message": [
+        1, 
+        1, 
+        1, 
+        3, 
+        2, 
+        0
+      ], 
+      "success": true, 
+      "expected_all_text": [
+        "AC", 
+        "BC", 
+        "ABC", 
+        ""
+      ], 
+      "nav_state_subscribers": [
+        "/board1_debug_detector"
+      ], 
+      "rounds": [
+        {
+          "all_text_messages": [
+            {
+              "seq": 26, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 26, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 26, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 1.006, 
+          "frame_sha256": "93beec5508c9b8cc60bac6c98bba39bd503e4babe77d74498089b0b8fced0981", 
+          "visit": 1, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "AC", 
+            "BC", 
+            "ABC", 
+            ""
+          ], 
+          "prior_seq": 25
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 27, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 27, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 27, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 0.906, 
+          "frame_sha256": "efd1679f9e8c6ec6d5c3d43bd10032ecc38eb47d40ef1e339ec5fd1cc2f8d40f", 
+          "visit": 2, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "AC", 
+            "BC", 
+            "ABC", 
+            ""
+          ], 
+          "prior_seq": 26
+        }, 
+        {
+          "all_text_messages": [
+            {
+              "seq": 28, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 28, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }, 
+            {
+              "seq": 28, 
+              "selected_index": 2, 
+              "selected_msg": [
+                1, 
+                1, 
+                1, 
+                3, 
+                2, 
+                0
+              ], 
+              "all_text": [
+                "AC", 
+                "BC", 
+                "ABC", 
+                ""
+              ], 
+              "car_id": 1, 
+              "selected_text": "ABC"
+            }
+          ], 
+          "latency_sec": 0.856, 
+          "frame_sha256": "eb107e2150f236366a30ca2f3aad6d49f64715740ae1c844655623ca0066bff8", 
+          "visit": 3, 
+          "messages": [
+            [
+              1, 
+              1, 
+              1, 
+              3, 
+              2, 
+              0
+            ]
+          ], 
+          "real_window_count": 4, 
+          "snapshot_decoded": [
+            "AC", 
+            "BC", 
+            "ABC", 
+            ""
+          ], 
+          "prior_seq": 27
+        }
+      ]
+    }
+  ], 
+  "live_rounds": 24, 
+  "native_success": true, 
+  "empty_asset_count": 1, 
+  "validated_production_commit": "a49fe6d6c47d6fa694cda9bb95e96da48eee0329", 
+  "archive": "/home/EPRobot/code_archives/board1_full_qr/20261016_152845"
+}

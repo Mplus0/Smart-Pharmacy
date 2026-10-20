@@ -1,0 +1,3 @@
+<launch>
+    <node name="pharmacy_iscc" pkg="pharmacy_iscc" type="F1_detect_code_v5.py" cwd="node" />
+</launch>

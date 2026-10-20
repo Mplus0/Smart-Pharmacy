@@ -1,0 +1,1 @@
+"""Pharmacy ISCC config components."""

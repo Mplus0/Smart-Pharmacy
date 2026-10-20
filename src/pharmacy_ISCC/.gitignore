@@ -1,0 +1,8 @@
+build/
+devel/
+install/
+logs/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+result_md5/

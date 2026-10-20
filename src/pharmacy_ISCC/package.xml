@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pharmacy_iscc</name>
+  <version>0.1.0</version>
+  <description>Modular refactor of the current smart pharmacy nodes.</description>
+  <maintainer email="EPRobot@todo.todo">EPRobot</maintainer>
+  <license>TODO</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>rospy</depend>
+  <depend>roslib</depend>
+  <depend>rosgraph</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>move_base_msgs</depend>
+  <depend>actionlib</depend>
+  <depend>actionlib_msgs</depend>
+  <depend>tf</depend>
+  <depend>visualization_msgs</depend>
+  <depend>cv_bridge</depend>
+  <exec_depend>robot_navigation</exec_depend>
+  <exec_depend>astra_camera</exec_depend>
+  <exec_depend>web_video_server</exec_depend>
+  <exec_depend>ar_track_alvar</exec_depend>
+  <exec_depend>sox</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-rospkg</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-yaml</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-numpy</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-opencv</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-openpyxl</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-rospkg</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-yaml</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-numpy</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-opencv</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-openpyxl</exec_depend>
+  <export/>
+</package>

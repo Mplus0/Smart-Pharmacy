@@ -1,0 +1,28 @@
+'1':
+  car_id: 1
+  peer_id: 2
+  start_active: true
+  use_peer_board1_result: false
+  camera_url: http://192.168.124.20:8080/stream?topic=/camera/rgb/image_raw
+  home_pose:
+  - 0.0
+  - 0.0
+  - 7
+  tcp:
+    local_port: 9001
+    peer_ip: 192.168.124.6
+    peer_port: 9002
+'2':
+  car_id: 2
+  peer_id: 1
+  start_active: false
+  use_peer_board1_result: true
+  camera_url: http://192.168.124.6:8080/stream?topic=/camera/rgb/image_raw
+  home_pose:
+  - -0.069
+  - -0.269
+  - 7
+  tcp:
+    local_port: 9002
+    peer_ip: 192.168.124.20
+    peer_port: 9001

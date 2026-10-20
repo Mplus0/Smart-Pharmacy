@@ -1,0 +1,1 @@
+"""Pharmacy ISCC common components."""

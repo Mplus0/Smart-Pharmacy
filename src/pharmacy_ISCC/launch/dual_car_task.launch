@@ -1,0 +1,11 @@
+<launch>
+  <!-- Explicit two-car mode; run on each car with its own car_id and ROS master. -->
+  <arg name="car_id" default="1"/>
+  <arg name="max_rounds" default="1"/>
+  <include file="$(find pharmacy_iscc)/launch/pharmacy_main_no_referee.launch">
+    <arg name="car_id" value="$(arg car_id)"/>
+    <arg name="start_base" value="false"/>
+    <arg name="enable_dual_car" value="true"/>
+    <arg name="max_rounds" value="$(arg max_rounds)"/>
+  </include>
+</launch>

@@ -1,0 +1,1031 @@
+{
+  "positions": [
+    [
+      480,
+      120
+    ],
+    [
+      995,
+      120
+    ],
+    [
+      480,
+      560
+    ],
+    [
+      995,
+      560
+    ]
+  ],
+  "assets": {
+    "A_1.png": {
+      "payload": "A",
+      "sha256": "8f77f5fab4f4e5e28600a0229934b65972718a04325d058be1ee9202dfdd3404"
+    },
+    "B_1.png": {
+      "payload": "B",
+      "sha256": "c90b665801a68192b86d3d0286450225604d9def0a8e0e19ef5a50b9595bd9a3"
+    },
+    "C_1.png": {
+      "payload": "C",
+      "sha256": "75ededb8d16f305ce6d10864c4819cfea769399dd93464adc4e5476c55ca6b06"
+    },
+    "AB_1.png": {
+      "payload": "AB",
+      "sha256": "d15c9319c714fca101248ce6cc039a6aa6c2546440b7e1500b830b4ae2e5a09e"
+    },
+    "AC_1.png": {
+      "payload": "AC",
+      "sha256": "e71dcfe40142d6520363502b5a0a20964024a1b73eea5d99d9d2c88752d1141c"
+    },
+    "BC_1.png": {
+      "payload": "BC",
+      "sha256": "292c1e39253f76fcc59d59133a4d6756db7ea6f30cc5269a9f26e572b07c3b47"
+    },
+    "ABC_1.png": {
+      "payload": "ABC",
+      "sha256": "11366f47d487103af8a2e4085334c6221d5990a500141bff582983417a35f3bf"
+    },
+    "qr_A.png": {
+      "payload": "A",
+      "sha256": "19b8408dd823ed0dbeed130492f1ad39aa1503983fa12a26438dabec089d6797"
+    },
+    "qr_B.png": {
+      "payload": "B",
+      "sha256": "31628b8559fbc82f2b8d0c184d00e5d2ee6d9e5a917078a3b5bd92ffb22be7af"
+    },
+    "qr_C.png": {
+      "payload": "C",
+      "sha256": "0603e3a2081aecb18b3bdefd5a5a77ae455e929c2c5a10faa5cff0e86b6c8cb2"
+    },
+    "qr_AB.png": {
+      "payload": "AB",
+      "sha256": "d14c4d6cdb7bf9e52ad2f68f64298878cba15abfe79a4ebe36fb554b405ea3ea"
+    },
+    "qr_AC.png": {
+      "payload": "AC",
+      "sha256": "8a7638f43c701eec54687a7a8fd20b216fda4590f37c15f54ce8ab1075bb11c1"
+    },
+    "qr_BC.png": {
+      "payload": "BC",
+      "sha256": "675e416059578dd443ee47235bdf4829137168764f189e06aac49a9422672890"
+    },
+    "qr_ABC.png": {
+      "payload": "ABC",
+      "sha256": "a464b9b96561b5a25e81f8c27a53f05ce5581d71c8183d5a94005b1e70cbcac5"
+    },
+    "distractor_1.png": {
+      "payload": "ACD",
+      "sha256": "19b7637499c9d4bab2ed8a91d97ed69f2fefc9c360e756fb2c548e3da544bc67"
+    },
+    "distractor_2.png": {
+      "payload": "D",
+      "sha256": "1c1448558ffa55bdee9a00b257c86c3d26763989ac76802da7b422d7c7ee0f49"
+    },
+    "distractor_3.png": {
+      "payload": "https://www.hlcode.cn",
+      "sha256": "13eec6afca78c4ffea48c86278249119ab2267766d851c2180a7abbdf4b090ad"
+    },
+    "Empty.png": {
+      "payload": "",
+      "sha256": "82d7edc1ce18a945eea513c835180c8a32a38486a89b01dbd299e9daf4f68a6b"
+    }
+  },
+  "scenes": [
+    {
+      "case": "labelled_1",
+      "files": [
+        "A_1.png",
+        "B_1.png",
+        "C_1.png",
+        "AB_1.png"
+      ],
+      "all_text": [
+        "A",
+        "B",
+        "C",
+        "AB"
+      ],
+      "message": [
+        0,
+        1,
+        1,
+        2,
+        3,
+        0
+      ],
+      "sha256": "dea5dac0b31bcad57e352f4688c06c216d6df0e210e438080f00cd6e7425395d"
+    },
+    {
+      "case": "labelled_2",
+      "files": [
+        "AC_1.png",
+        "BC_1.png",
+        "ABC_1.png",
+        "Empty.png"
+      ],
+      "all_text": [
+        "AC",
+        "BC",
+        "ABC",
+        ""
+      ],
+      "message": [
+        1,
+        1,
+        1,
+        3,
+        2,
+        0
+      ],
+      "sha256": "3495bf1a29222583d6bb693b406c5edf0b469c88d36291c3ff4c65b64058743b"
+    },
+    {
+      "case": "plain_1",
+      "files": [
+        "qr_A.png",
+        "qr_B.png",
+        "qr_C.png",
+        "qr_AB.png"
+      ],
+      "all_text": [
+        "A",
+        "B",
+        "C",
+        "AB"
+      ],
+      "message": [
+        0,
+        1,
+        1,
+        2,
+        3,
+        0
+      ],
+      "sha256": "3c1fdcfbf976a2e64afd0d6378fbdd84d0fca4b339ff4a23e9865fb5e1cc683e"
+    },
+    {
+      "case": "plain_2",
+      "files": [
+        "qr_AC.png",
+        "qr_BC.png",
+        "qr_ABC.png",
+        "Empty.png"
+      ],
+      "all_text": [
+        "AC",
+        "BC",
+        "ABC",
+        ""
+      ],
+      "message": [
+        1,
+        1,
+        1,
+        3,
+        2,
+        0
+      ],
+      "sha256": "51507f19d7bbec963aa99affadceb37c2398ce44ec1ee44edd81c154fe64fc0e"
+    },
+    {
+      "case": "invalid_acd",
+      "files": [
+        "distractor_1.png",
+        "ABC_1.png",
+        "Empty.png",
+        "Empty.png"
+      ],
+      "all_text": [
+        "ACD",
+        "ABC",
+        "",
+        ""
+      ],
+      "message": [
+        1,
+        1,
+        1,
+        3,
+        1,
+        1
+      ],
+      "sha256": "1c827e3cea397621b8658f23ba1f351e041e5c812c97bac422eb6a5642e3bd28"
+    },
+    {
+      "case": "invalid_d",
+      "files": [
+        "ABC_1.png",
+        "distractor_2.png",
+        "Empty.png",
+        "Empty.png"
+      ],
+      "all_text": [
+        "ABC",
+        "D",
+        "",
+        ""
+      ],
+      "message": [
+        1,
+        1,
+        1,
+        3,
+        0,
+        2
+      ],
+      "sha256": "bd168954769b9bd0d43ce8e185dae109d6cd6bad2387280f873cfefc4072f76e"
+    },
+    {
+      "case": "invalid_url",
+      "files": [
+        "Empty.png",
+        "Empty.png",
+        "ABC_1.png",
+        "distractor_3.png"
+      ],
+      "all_text": [
+        "",
+        "",
+        "ABC",
+        "https://www.hlcode.cn"
+      ],
+      "message": [
+        1,
+        1,
+        1,
+        3,
+        2,
+        4
+      ],
+      "sha256": "9b2c43bf303a52740eb27ac9a813c7692e43bfd938c29ce2105085ee4d398474"
+    },
+    {
+      "case": "all_invalid",
+      "files": [
+        "distractor_1.png",
+        "distractor_2.png",
+        "distractor_3.png",
+        "Empty.png"
+      ],
+      "all_text": [
+        "ACD",
+        "D",
+        "https://www.hlcode.cn",
+        ""
+      ],
+      "message": null,
+      "sha256": "c1d1fb6f95d6671e11b5b15b148bf9ede9b8bac9eefd859bf728bac99e0749c0"
+    }
+  ],
+  "isolated": [
+    {
+      "case": "A_1_slot1",
+      "file": "A_1.png",
+      "slot": 0,
+      "all_text": [
+        "A",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "A_1_slot2",
+      "file": "A_1.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "A",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "A_1_slot3",
+      "file": "A_1.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "A",
+        ""
+      ]
+    },
+    {
+      "case": "A_1_slot4",
+      "file": "A_1.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "A"
+      ]
+    },
+    {
+      "case": "B_1_slot1",
+      "file": "B_1.png",
+      "slot": 0,
+      "all_text": [
+        "B",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "B_1_slot2",
+      "file": "B_1.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "B",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "B_1_slot3",
+      "file": "B_1.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "B",
+        ""
+      ]
+    },
+    {
+      "case": "B_1_slot4",
+      "file": "B_1.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "B"
+      ]
+    },
+    {
+      "case": "C_1_slot1",
+      "file": "C_1.png",
+      "slot": 0,
+      "all_text": [
+        "C",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "C_1_slot2",
+      "file": "C_1.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "C",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "C_1_slot3",
+      "file": "C_1.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "C",
+        ""
+      ]
+    },
+    {
+      "case": "C_1_slot4",
+      "file": "C_1.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "C"
+      ]
+    },
+    {
+      "case": "AB_1_slot1",
+      "file": "AB_1.png",
+      "slot": 0,
+      "all_text": [
+        "AB",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "AB_1_slot2",
+      "file": "AB_1.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "AB",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "AB_1_slot3",
+      "file": "AB_1.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "AB",
+        ""
+      ]
+    },
+    {
+      "case": "AB_1_slot4",
+      "file": "AB_1.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "AB"
+      ]
+    },
+    {
+      "case": "AC_1_slot1",
+      "file": "AC_1.png",
+      "slot": 0,
+      "all_text": [
+        "AC",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "AC_1_slot2",
+      "file": "AC_1.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "AC",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "AC_1_slot3",
+      "file": "AC_1.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "AC",
+        ""
+      ]
+    },
+    {
+      "case": "AC_1_slot4",
+      "file": "AC_1.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "AC"
+      ]
+    },
+    {
+      "case": "BC_1_slot1",
+      "file": "BC_1.png",
+      "slot": 0,
+      "all_text": [
+        "BC",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "BC_1_slot2",
+      "file": "BC_1.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "BC",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "BC_1_slot3",
+      "file": "BC_1.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "BC",
+        ""
+      ]
+    },
+    {
+      "case": "BC_1_slot4",
+      "file": "BC_1.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "BC"
+      ]
+    },
+    {
+      "case": "ABC_1_slot1",
+      "file": "ABC_1.png",
+      "slot": 0,
+      "all_text": [
+        "ABC",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "ABC_1_slot2",
+      "file": "ABC_1.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "ABC",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "ABC_1_slot3",
+      "file": "ABC_1.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "ABC",
+        ""
+      ]
+    },
+    {
+      "case": "ABC_1_slot4",
+      "file": "ABC_1.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "ABC"
+      ]
+    },
+    {
+      "case": "qr_A_slot1",
+      "file": "qr_A.png",
+      "slot": 0,
+      "all_text": [
+        "A",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_A_slot2",
+      "file": "qr_A.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "A",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_A_slot3",
+      "file": "qr_A.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "A",
+        ""
+      ]
+    },
+    {
+      "case": "qr_A_slot4",
+      "file": "qr_A.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "A"
+      ]
+    },
+    {
+      "case": "qr_B_slot1",
+      "file": "qr_B.png",
+      "slot": 0,
+      "all_text": [
+        "B",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_B_slot2",
+      "file": "qr_B.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "B",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_B_slot3",
+      "file": "qr_B.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "B",
+        ""
+      ]
+    },
+    {
+      "case": "qr_B_slot4",
+      "file": "qr_B.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "B"
+      ]
+    },
+    {
+      "case": "qr_C_slot1",
+      "file": "qr_C.png",
+      "slot": 0,
+      "all_text": [
+        "C",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_C_slot2",
+      "file": "qr_C.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "C",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_C_slot3",
+      "file": "qr_C.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "C",
+        ""
+      ]
+    },
+    {
+      "case": "qr_C_slot4",
+      "file": "qr_C.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "C"
+      ]
+    },
+    {
+      "case": "qr_AB_slot1",
+      "file": "qr_AB.png",
+      "slot": 0,
+      "all_text": [
+        "AB",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_AB_slot2",
+      "file": "qr_AB.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "AB",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_AB_slot3",
+      "file": "qr_AB.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "AB",
+        ""
+      ]
+    },
+    {
+      "case": "qr_AB_slot4",
+      "file": "qr_AB.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "AB"
+      ]
+    },
+    {
+      "case": "qr_AC_slot1",
+      "file": "qr_AC.png",
+      "slot": 0,
+      "all_text": [
+        "AC",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_AC_slot2",
+      "file": "qr_AC.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "AC",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_AC_slot3",
+      "file": "qr_AC.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "AC",
+        ""
+      ]
+    },
+    {
+      "case": "qr_AC_slot4",
+      "file": "qr_AC.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "AC"
+      ]
+    },
+    {
+      "case": "qr_BC_slot1",
+      "file": "qr_BC.png",
+      "slot": 0,
+      "all_text": [
+        "BC",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_BC_slot2",
+      "file": "qr_BC.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "BC",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_BC_slot3",
+      "file": "qr_BC.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "BC",
+        ""
+      ]
+    },
+    {
+      "case": "qr_BC_slot4",
+      "file": "qr_BC.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "BC"
+      ]
+    },
+    {
+      "case": "qr_ABC_slot1",
+      "file": "qr_ABC.png",
+      "slot": 0,
+      "all_text": [
+        "ABC",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_ABC_slot2",
+      "file": "qr_ABC.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "ABC",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "qr_ABC_slot3",
+      "file": "qr_ABC.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "ABC",
+        ""
+      ]
+    },
+    {
+      "case": "qr_ABC_slot4",
+      "file": "qr_ABC.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "ABC"
+      ]
+    },
+    {
+      "case": "distractor_1_slot1",
+      "file": "distractor_1.png",
+      "slot": 0,
+      "all_text": [
+        "ACD",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_1_slot2",
+      "file": "distractor_1.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "ACD",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_1_slot3",
+      "file": "distractor_1.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "ACD",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_1_slot4",
+      "file": "distractor_1.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "ACD"
+      ]
+    },
+    {
+      "case": "distractor_2_slot1",
+      "file": "distractor_2.png",
+      "slot": 0,
+      "all_text": [
+        "D",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_2_slot2",
+      "file": "distractor_2.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "D",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_2_slot3",
+      "file": "distractor_2.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "D",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_2_slot4",
+      "file": "distractor_2.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "D"
+      ]
+    },
+    {
+      "case": "distractor_3_slot1",
+      "file": "distractor_3.png",
+      "slot": 0,
+      "all_text": [
+        "https://www.hlcode.cn",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_3_slot2",
+      "file": "distractor_3.png",
+      "slot": 1,
+      "all_text": [
+        "",
+        "https://www.hlcode.cn",
+        "",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_3_slot3",
+      "file": "distractor_3.png",
+      "slot": 2,
+      "all_text": [
+        "",
+        "",
+        "https://www.hlcode.cn",
+        ""
+      ]
+    },
+    {
+      "case": "distractor_3_slot4",
+      "file": "distractor_3.png",
+      "slot": 3,
+      "all_text": [
+        "",
+        "",
+        "",
+        "https://www.hlcode.cn"
+      ]
+    }
+  ]
+}
