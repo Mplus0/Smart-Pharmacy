@@ -160,6 +160,7 @@ class BaseControl:
         self.cmd_vel_topic= rospy.get_param('~cmd_vel_topic','/cmd_vel')   #need to set from launch
         self.feedback_vel_topic= rospy.get_param('~feedback_vel_topic','/feedback_vel')
         self.wheelbase = rospy.get_param('~wheelbase', 0.210)
+        self.min_cmd_vel_x = float(rospy.get_param('~min_cmd_vel_x', 0.1))
         self.imu_topic = rospy.get_param('~imu_topic','/imu_data')#_data
         self.kp = rospy.get_param('~base_kp',1000.0)
         self.ki = rospy.get_param('~base_ki',100.0)
@@ -270,10 +271,10 @@ class BaseControl:
         self.trans_x = data.linear.x  #*6
         self.trans_y = data.linear.y
         self.rotat_z = data.angular.z
-        if self.trans_x < 0.1 and self.trans_x > 0:
-            self.trans_x = 0.1
-        if self.trans_x >-0.1 and self.trans_x < 0:
-            self.trans_x = -0.1
+        if self.trans_x < self.min_cmd_vel_x and self.trans_x > 0:
+            self.trans_x = self.min_cmd_vel_x
+        if self.trans_x > -self.min_cmd_vel_x and self.trans_x < 0:
+            self.trans_x = -self.min_cmd_vel_x
         if self.is_send_anger == 'true':
             steering = data.angular.z
         else:

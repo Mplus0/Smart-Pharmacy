@@ -101,7 +101,9 @@ Master；如同机运行需各自记录目录，避免固定 Excel 名覆盖。�
 ## 安装与依赖
 
 setup.py 将平铺 scripts/ 安装为 pharmacy_iscc；全部内部导入使用该命名空间。
-CMake 安装四个正式节点和三个工具，算法/配置/音频模块通过 Python 包安装。
+CMake 安装四个正式节点和三个工具，并将 scripts/ 安装为 pharmacy_iscc 包。
+ROS Melodic 的 catkin_python_setup 要求包名与源目录名一致；为保留平铺的 scripts/，
+CMake 在 devel 生成包路径入口，在 install 安装同一命名空间下的 Python 模块。
 launch/config/resources 安装至包 share，rospkg 定位资源，不依赖当前工作目录。
 不支持未构建时直接从 scripts 目录执行脚本；车辆端先完成 catkin 构建并 source 工作空间。
 
@@ -112,8 +114,9 @@ pyzbar 需另行安装到 ROS 使用的 Python 解释器。package.xml 按 ROS_P
 基础系统依赖车辆上的 robot_navigation、astra_camera、web_video_server；AR 入口还需
 ar_track_alvar。地图和底盘参数仍由外部 robot_navigation 管理。
 
-catkin_install_python 的 PROGRAMS 负责生成可执行的 devel/install 入口；Windows
-无法验证 Linux 执行位。文本由 .gitattributes 固定 LF，避免 shebang 的 CRLF 问题。
+catkin_install_python 的 PROGRAMS 负责安装可执行入口。此车辆的 ROS Melodic
+在 devel 使用源目录脚本，四个正式节点和三个工具必须有 Linux 执行权限。
+文本由 .gitattributes 固定 LF，避免 shebang 的 CRLF 问题。
 
 ## 车辆端运行步骤（本次未执行）
 

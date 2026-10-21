@@ -21,6 +21,7 @@ F1_yaofang.py
 """
 
 import os
+import sys
 import random
 import socket
 import json
@@ -798,22 +799,18 @@ class MoveBaseSquare(object):
     def announce_pickup_result(self, window_code):
         """发布并播报从 A/B/C 取到的样本组合。"""
         lab_info = LAB_INFO[self.windows_1234]
-        rospy.loginfo(
-            "取到%s窗口中的%s样本",
-            WINDOW_LOG_NAME[window_code],
-            lab_info["sample_name"]
-        )
+        message = u"取到%s窗口中的%s样本" % (
+            WINDOW_LOG_NAME[window_code], lab_info["sample_name"])
+        rospy.loginfo(message.encode("utf-8") if sys.version_info[0] < 3 else message)
 
         play_audio("%s%s.wav" % (lab_info["pickup_audio_prefix"], window_code))
 
     def announce_delivery_result(self):
         """到达最终化验窗口后，根据样本数量播报。"""
         lab_info = LAB_INFO[self.windows_1234]
-        rospy.loginfo(
-            "到达%s，样本数为%d",
-            lab_info["lab_name"],
-            self.windows_count
-        )
+        message = u"到达%s，样本数为%d" % (
+            lab_info["lab_name"], self.windows_count)
+        rospy.loginfo(message.encode("utf-8") if sys.version_info[0] < 3 else message)
         play_audio("%s%d.wav" % (lab_info["delivery_audio_prefix"], self.windows_count))
 
     def detect_board1_result(self, msg):
