@@ -30,3 +30,6 @@ Thumbs.db
 
 # yolo 训练数据集
 dataset/
+
+# 日志文件
+log/
