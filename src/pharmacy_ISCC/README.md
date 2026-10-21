@@ -22,7 +22,6 @@ pharmacy_ISCC/
 │   ├── F1_yaofang_v5.py
 │   ├── audio.py
 │   ├── tcp_link_v2.py
-│   ├── referee_client_v3.py
 │   ├── config.py
 │   ├── recognition_records.py
 │   └── navigation_utils.py
@@ -35,7 +34,6 @@ pharmacy_ISCC/
 │   ├── pharmacy_main.launch
 │   ├── single_car.launch
 │   ├── dual_car.launch
-│   ├── referee_only.launch
 │   ├── detect.launch
 │   ├── test_move_to_waypoint.launch
 │   └── ar_marker_detection.launch
@@ -55,9 +53,8 @@ pharmacy_ISCC/
 | board2_detector.py | 板二模板加载、多尺度匹配；接收已有图像和模板，不打开相机 |
 | board2_tcp.py | GET 查询客户端，接收节点提供的状态检查函数；不单独启动 ROS 节点 |
 | F1_yaofang_v5.py | 手动放行、导航状态机、单车缓存、双车轮转及任务/记录调用 |
-| audio.py | 任务阻塞播报和板一有时限的异常提示；保留两者不同的等待/中断语义 |
+| audio.py | 取样/送达先启动播放器，清图和原 0.5 秒停留与播报并行；等待两者结束后才导航。板一异常提示仍有时限 |
 | tcp_link_v2.py | 双车 TCP 重发、序号去重、IP/token 检查及本地话题转发 |
-| referee_client_v3.py | 裁判 JSON、里程计速度、TF 坐标、发送与重连 |
 | config.py | 三个 YAML 的统一读取、元组恢复、车辆选择、资源及记录路径 |
 | recognition_records.py | MD5、SQLite 活动任务和 Excel 导出 |
 | navigation_utils.py | 地图、姿态、目标合法性、新鲜定位检查，供正式节点和工具复用 |
@@ -68,7 +65,7 @@ pharmacy_ISCC/
 三个 YAML 是业务配置的唯一来源，使用 PyYAML safe_load；competition/vision 使用
 带注释的 YAML 流式映射语法，保持原参数键、数值和分组，便于与原字典逐项对照。
 
-- `competition.yaml`：topics、states、nav、referee、dual_tcp、lab_info、window_log_name。
+- `competition.yaml`：topics、states、nav、dual_tcp、lab_info、window_log_name。
 - `vehicles.yaml`：原 CARS，两辆车的 ID、地址、端口、起点及先发/共享结果差异。
 - `vision.yaml`：board1、board2、detect，包括图像输入、模板阈值、板二 TCP。
 
@@ -89,8 +86,6 @@ wait_time 必须为 0 或 5～10 的整数，超时/无有效结果仍使用默�
 vision 模式使用原模板算法，复用视觉节点的相机帧。忙碌实际等待
 `max(0, wait_time - 2)` 秒，播报计时且必须等播报结束。
 完成送样停留和播报、进入状态 15 时释放双车令牌。双车 JSON 字段、重发、去重不变。
-裁判仍按 2 Hz 发送 `id,speed,odom,task,CV1,CV2` 换行 JSON，TF 更新 4 Hz。
-CV1 对应板二，CV2 对应板一。
 
 记录继续使用原 JSON 序列化和 UTF-8 MD5 输入、SQLite 表及活动标记、记录调用时机、
 Excel 列/样式与覆盖策略。目录默认 `${ROS_HOME:-~/.ros}/pharmacy_ISCC/result_md5`，
@@ -101,7 +96,7 @@ Master；如同机运行需各自记录目录，避免固定 Excel 名覆盖。�
 ## 安装与依赖
 
 setup.py 将平铺 scripts/ 安装为 pharmacy_iscc；全部内部导入使用该命名空间。
-CMake 安装四个正式节点和三个工具，并将 scripts/ 安装为 pharmacy_iscc 包。
+CMake 安装三个正式节点和三个工具，并将 scripts/ 安装为 pharmacy_iscc 包。
 ROS Melodic 的 catkin_python_setup 要求包名与源目录名一致；为保留平铺的 scripts/，
 CMake 在 devel 生成包路径入口，在 install 安装同一命名空间下的 Python 模块。
 launch/config/resources 安装至包 share，rospkg 定位资源，不依赖当前工作目录。
@@ -115,7 +110,7 @@ pyzbar 需另行安装到 ROS 使用的 Python 解释器。package.xml 按 ROS_P
 ar_track_alvar。地图和底盘参数仍由外部 robot_navigation 管理。
 
 catkin_install_python 的 PROGRAMS 负责安装可执行入口。此车辆的 ROS Melodic
-在 devel 使用源目录脚本，四个正式节点和三个工具必须有 Linux 执行权限。
+在 devel 使用源目录脚本，三个正式节点和三个工具必须有 Linux 执行权限。
 文本由 .gitattributes 固定 LF，避免 shebang 的 CRLF 问题。
 
 ## 车辆端运行步骤（本次未执行）
@@ -131,7 +126,7 @@ rosservice call /nav_pharmacy/start '{}'
 ```
 
 single_car 固定 car1、关闭双车 TCP 和双车轮转，视觉不 respawn，默认一轮整板任务。
-`max_rounds:=0` 连续运行；`start_referee:=true` 可同时启动裁判。
+`max_rounds:=0` 连续运行。
 
 双车分别在各自机器的 ROS Master 上操作；基础层沿用赛道初始化、不打开 RViz：
 
@@ -142,7 +137,7 @@ rosservice call /nav_pharmacy/start '{}'
 ```
 
 car2 业务传 `car_id:=2`，两车均需手动放行，car1 先发、car2 等令牌。
-默认每车一轮，连续运行传 `max_rounds:=0`；裁判可用 `start_referee:=true`。
+默认每车一轮，连续运行传 `max_rounds:=0`。
 检查 vehicles.yaml、competition.yaml 和 vision.yaml 中的现场地址。
 
 base_system 保留 start_navigation、start_camera、start_video_server、use_race_init，
@@ -154,12 +149,6 @@ start_dual_tcp、start_detect、start_nav_pharmacy、respawn_comm、respawn_dete
 respawn_nav_pharmacy、detect_start_delay、nav_start_delay、dual_publish_repeat、
 dual_publish_interval。默认双车模式 false、TCP true；专用单/双车入口传入相应值。
 视觉延时仍 3 秒，导航延时仍 6 秒；启动顺序和重启策略保持原值。
-
-独立裁判通信：
-
-```bash
-roslaunch pharmacy_ISCC referee_only.launch car_id:=1
-```
 
 独立视觉调试使用运行中的相机，保留话题与记录目录隔离，不启动任务导航：
 
@@ -208,11 +197,10 @@ roslaunch pharmacy_ISCC ar_marker_detection.launch
 | F1_detect_code_v5.py 中板一算法 + board1_selection.py | board1_detector.py；节点保留输入、状态与发布 |
 | 视觉中的板二模板算法 | board2_detector.py，模板由节点持有并传入 |
 | 视觉中的 query_board2_tcp | board2_tcp.py，实时状态检查通过参数传入 |
-| 状态机 play_audio、视觉异常音频 | audio.py，调用时机及等待逻辑不变 |
+| 状态机 play_audio、视觉异常音频 | audio.py；取样/送达在导航成功后优先启动播报，与原到达动作并行；下一段导航仍等待播报结束 |
 | dual_car_config.py + package_paths.py | config.py + competition/vehicles/vision.yaml |
 | navigation_guard.py | navigation_utils.py |
 | base_camera_nav.launch + single_car_base.launch | base_system.launch，以参数保留差异 |
-| pharmacy_main_no_referee.launch | pharmacy_main.launch，仅保留业务 |
 | single_car_task.launch + full_run_debug.launch | single_car.launch |
 | dual_car_task.launch | dual_car.launch |
 | QRcode.launch | ar_marker_detection.launch |

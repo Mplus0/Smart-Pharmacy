@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Blocking task speech and bounded board-one interference alert."""
+"""Task speech with optional concurrent arrival work and bounded alerts."""
 import os
 import subprocess
 import time
@@ -8,18 +8,23 @@ from pharmacy_iscc.config import COMMON
 
 AUDIO_DIR = COMMON["paths"]["audio_dir"]
 
-def play_audio(filename):
-    """等待播报结束后再继续状态机，避免下一段导航与播报重叠。"""
+def play_audio(filename, during_playback=None):
+    """先启动播放器，再执行到达动作；两者完成后才继续状态机。"""
     if rospy.is_shutdown():
         raise rospy.ROSInterruptException("Audio interrupted by shutdown")
     path = os.path.join(AUDIO_DIR, filename)
     if not os.path.exists(path):
         rospy.logwarn("语音文件不存在: %s", path)
+        if during_playback is not None:
+            during_playback()
         return
     proc = None
     try:
         proc = subprocess.Popen(["play", path])
         rospy.loginfo("开始播报，等待播放完成: %s", filename)
+        # Popen 已启动独立播放器，清图和停留可在播报期间执行。
+        if during_playback is not None:
+            during_playback()
         while proc.poll() is None:
             if rospy.is_shutdown():
                 raise rospy.ROSInterruptException("Audio interrupted by shutdown")

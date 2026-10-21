@@ -1,19 +1,5 @@
 <launch>
-  <!--
-    pharmacy_main.launch
-    主业务启动文件：不启动裁判通信节点，避免裁判通信高频日志刷屏。
-
-    推荐启动：
-      一号车主业务：
-        roslaunch pharmacy_ISCC pharmacy_main.launch car_id:=1
-
-      二号车主业务：
-        roslaunch pharmacy_ISCC pharmacy_main.launch car_id:=2
-
-    裁判通信请另开终端启动：
-        roslaunch pharmacy_ISCC referee_only.launch car_id:=1
-        roslaunch pharmacy_ISCC referee_only.launch car_id:=2
-  -->
+  <!-- 主业务：视觉识别、导航状态机及可选双车通信。 -->
 
   <arg name="enable_dual_car" default="false"/>
   <arg name="max_rounds" default="1"/>

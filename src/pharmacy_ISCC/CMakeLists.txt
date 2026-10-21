@@ -21,7 +21,6 @@ install(DIRECTORY scripts/
 catkin_install_python(PROGRAMS
   scripts/F1_detect_code_v5.py
   scripts/F1_yaofang_v5.py
-  scripts/referee_client_v3.py
   scripts/tcp_link_v2.py
   tools/record_waypoint.py
   tools/waypoint_console.py

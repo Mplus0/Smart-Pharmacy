@@ -9,11 +9,11 @@
 setup.py 及以下目录；不额外增加模块。
 
 - scripts：__init__.py、F1_detect_code_v5.py、board1_detector.py、board2_detector.py、
-  board2_tcp.py、F1_yaofang_v5.py、audio.py、tcp_link_v2.py、referee_client_v3.py、
+  board2_tcp.py、F1_yaofang_v5.py、audio.py、tcp_link_v2.py、
   config.py、recognition_records.py、navigation_utils.py。
 - tools：waypoint_console.py、record_waypoint.py、test_move_to_waypoint.py。
 - launch：base_system.launch、pharmacy_main.launch、single_car.launch、dual_car.launch、
-  referee_only.launch、detect.launch、test_move_to_waypoint.launch、ar_marker_detection.launch。
+  detect.launch、test_move_to_waypoint.launch、ar_marker_detection.launch。
 - config：competition.yaml、vehicles.yaml、vision.yaml。
 - resources：audio/ 中的 WAV、board2_templates/ 中的 PNG。
 
@@ -37,7 +37,7 @@ config.py 统一加载三个 YAML，提供 COMMON、CARS、车辆选择及路径
 不得调整算法、状态编号、航点顺序、阈值、超时、等待、语音映射、协议或消息格式。
 保留板一样本数量优先、同分原窗口顺序和整板队列；单车缓存和双车令牌逻辑不变。
 板二默认 TCP，GET 加换行、一行 JSON、无有效结果默认 free；vision 模式保留模板。
-保留双车 TCP 字段、重发、去重、IP/token 检查；保留裁判字段、发送频率和重连。
+保留双车 TCP 字段、重发、去重、IP/token 检查。
 保留 JSON/UTF-8 MD5、SQLite 表结构和记录时机、Excel 格式与覆盖策略。
 全部 WAV/PNG 保留，不迁移历史数据库/报表。
 

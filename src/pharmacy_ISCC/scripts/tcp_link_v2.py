@@ -3,7 +3,7 @@
 """
 dual_car_tcp_link.py
 
-[DUAL-TCP] 双车直连 TCP 通信节点，独立于 referee_client_v2.py。
+[DUAL-TCP] 双车直连 TCP 通信节点。
 
 作用：
 1. 订阅本车 ROS 话题 /dual_car/round_done
@@ -16,7 +16,6 @@ dual_car_tcp_link.py
 4. 收到对方 done 后，在本车 ROS 内发布 /dual_car/peer_done
    消息格式：Int32MultiArray.data = [peer_id, seq]
 
-这样 referee_client_v2.py 可以恢复为只负责裁判系统通信，不再承担双车联动。
 """
 
 import json
