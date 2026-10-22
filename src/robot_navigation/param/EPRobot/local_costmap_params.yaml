@@ -15,8 +15,8 @@ local_costmap:
   transform_tolerance: 0.5
 
   inflation_layer:
-    cost_scaling_factor: 10.0
-    inflation_radius: 0.15
+    cost_scaling_factor: 8.0
+    inflation_radius: 0.25
 
   plugins:
     - {name: static_layer, type: "costmap_2d::StaticLayer"}

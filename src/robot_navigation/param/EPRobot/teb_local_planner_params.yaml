@@ -60,8 +60,8 @@ TebLocalPlannerROS:
 
  # Obstacles 障碍物
 
- min_obstacle_dist: 0.08 # 与障碍的最小期望距离
- inflation_dist : 0.1  # 障碍物周围缓冲区，大于min_obstacle_dist才生效
+ min_obstacle_dist: 0.20 # 与障碍的最小期望距离
+ inflation_dist : 0.30  # 障碍物周围缓冲区，大于min_obstacle_dist才生效
  include_costmap_obstacles: True #是否考虑局部costmap的障碍
  include_dynamic_obstacles: false #原本为true，但是我们是静态环境，不需要这个算力开销 
  costmap_obstacles_behind_robot_dist: 1.0 #考虑后面n米内的障碍物
@@ -90,12 +90,12 @@ TebLocalPlannerROS:
  weight_kinematics_forward_drive: 800 #优化过程中，迫使机器人只选择前进方向
  weight_kinematics_turning_radius: 10.0 #在优化过程中，最小转弯半径的权重
  weight_optimaltime: 30  # 根据转换/执行时间对轨迹进行收缩的优化权重  #很重要的一个参数，值越大小车越大胆，转弯切内道，越容易拉到最大速度，也撞死得越快
- weight_obstacle: 50 #与障碍物最小距离的权重
+ weight_obstacle: 80 #与障碍物最小距离的权重
  weight_dynamic_obstacle: 100 # 在优化过程中，和动态障碍物最小距离的权重
  obstacle_cost_exponent: 4.0
  weight_adapt_factor: 1.0
  weight_dynamic_obstacle_inflation: 0.8
- weight_inflation: 0.8
+ weight_inflation: 1.0
  weight_shortest_path: 5.0
  weight_viapoint: 10.0
 
