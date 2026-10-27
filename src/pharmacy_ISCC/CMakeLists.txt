@@ -28,6 +28,13 @@ catkin_install_python(PROGRAMS
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
+install(PROGRAMS
+  tools/prepare_race.sh
+  tools/start_race.sh
+  tools/stop_race.sh
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 install(DIRECTORY launch config resources
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )

@@ -26,6 +26,14 @@ pharmacy_ISCC/
 │   ├── recognition_records.py
 │   └── navigation_utils.py
 ├── tools/
+│   ├── prepare_race.sh
+│   ├── start_race.sh
+│   ├── stop_race.sh
+│   ├── web_console/
+│   │   ├── server.py         # 独立 HTTP 控制后台
+│   │   ├── ros_observer.py   # 只读 ROS 订阅进程
+│   │   ├── index.html        # 单车控制台
+│   │   └── README.md
 │   ├── waypoint_console.py
 │   ├── record_waypoint.py
 │   └── test_move_to_waypoint.py
@@ -58,7 +66,7 @@ pharmacy_ISCC/
 | config.py | 三个 YAML 的统一读取、元组恢复、车辆选择、资源及记录路径 |
 | recognition_records.py | MD5、SQLite 活动任务和 Excel 导出 |
 | navigation_utils.py | 地图、姿态、目标合法性、新鲜定位检查，供正式节点和工具复用 |
-| tools/ | 交互取点、停车记录、单点导航；比赛代码不导入 tools |
+| tools/ | 赛前准备、手动放行、交互取点、停车记录、单点导航；比赛代码不导入 tools |
 
 ## 配置与原行为
 
@@ -96,7 +104,7 @@ Master；如同机运行需各自记录目录，避免固定 Excel 名覆盖。�
 ## 安装与依赖
 
 setup.py 将平铺 scripts/ 安装为 pharmacy_iscc；全部内部导入使用该命名空间。
-CMake 安装三个正式节点和三个工具，并将 scripts/ 安装为 pharmacy_iscc 包。
+CMake 安装三个正式节点、三个 Python 工具和三个 Bash 脚本，并将 scripts/ 安装为 pharmacy_iscc 包。
 ROS Melodic 的 catkin_python_setup 要求包名与源目录名一致；为保留平铺的 scripts/，
 CMake 在 devel 生成包路径入口，在 install 安装同一命名空间下的 Python 模块。
 launch/config/resources 安装至包 share，rospkg 定位资源，不依赖当前工作目录。
@@ -117,11 +125,36 @@ catkin_install_python 的 PROGRAMS 负责安装可执行入口。此车辆的 RO
 
 始终先启动基础系统，确认定位，再启动业务，最后手动放行。
 
-单车基础层沿用普通导航、打开 RViz；在另一个终端启动业务：
+单车使用三个 Bash 脚本，工作空间默认 `~/robot_ws`：
 
 ```bash
-roslaunch pharmacy_ISCC base_system.launch use_race_init:=false open_rviz:=true
+# 终端一：启动基础环境及单车业务，保持终端打开。
+bash ~/robot_ws/src/pharmacy_ISCC/tools/prepare_race.sh
+
+# 终端二：等待业务初始化完成，确认定位后开始比赛。
+bash ~/robot_ws/src/pharmacy_ISCC/tools/start_race.sh
+
+# 停止单车业务及基础环境。
+bash ~/robot_ws/src/pharmacy_ISCC/tools/stop_race.sh
+```
+
+启动脚本直接 source 工作空间，不做额外检查或交互确认。
+准备脚本并行启动两个 launch，不调用比赛放行服务；业务内部原有启动延时不变。
+比赛开始脚本直接调用 `/nav_pharmacy/start`，应在日志提示等待手动启动后执行。
+停止脚本向当前用户的上述两个 launch 发送 TERM，由 roslaunch 退出并清理子节点；
+不停止其他 ROS 项目，也不轮询确认退出。准备终端 Ctrl+C 同样请求关闭两个 launch。
+这属于软件进程关闭，不是独立硬件急停。使用 `bash` 调用无需设置执行权限。
+
+等效手动命令如下，两个 roslaunch 应分别在独立终端执行，均先 source 工作空间：
+
+```bash
+source ~/robot_ws/devel/setup.bash
+roslaunch pharmacy_ISCC base_system.launch use_race_init:=false open_rviz:=false
+# 另一终端，确认定位后：
+source ~/robot_ws/devel/setup.bash
 roslaunch pharmacy_ISCC single_car.launch
+# 再开一个终端，等待业务初始化完成后：
+source ~/robot_ws/devel/setup.bash
 rosservice call /nav_pharmacy/start '{}'
 ```
 
@@ -194,6 +227,7 @@ roslaunch pharmacy_ISCC ar_marker_detection.launch
 
 | 原文件/内容 | 最终归属 |
 | --- | --- |
+| 单车赛前启动与手动放行命令 | tools/prepare_race.sh、tools/start_race.sh、tools/stop_race.sh；环境启动、比赛放行与全部停止 |
 | F1_detect_code_v5.py 中板一算法 + board1_selection.py | board1_detector.py；节点保留输入、状态与发布 |
 | 视觉中的板二模板算法 | board2_detector.py，模板由节点持有并传入 |
 | 视觉中的 query_board2_tcp | board2_tcp.py，实时状态检查通过参数传入 |
@@ -227,3 +261,11 @@ calculate_qr_lengths、normalize_qr_data、build_board1_msg 及重复 detect_err
 未执行 Python 语法编译、模块导入、单元测试、catkin 构建、ROS 启动或实车运行。
 因此运行等价尚未实测，devel/install 导入、Linux 权限、依赖安装、硬件与网络连接及
 完整比赛链路仍需车辆环境验证。原包 license 为 TODO，本次保留。
+
+## 单车网页控制台（第一版）
+
+独立工具位于 `tools/web_console`，不改变原业务逻辑和启动架构。
+车辆端执行 `python3 ~/robot_ws/src/pharmacy_ISCC/tools/web_console/server.py`，
+在同一局域网访问 `http://小车IP:8090`。提供环境启动、比赛放行、全部停止、
+只读状态及识别结果、按需视频与日志。使用源码路径运行，不依赖 catkin 安装。
+详见 [控制台说明](tools/web_console/README.md)。第一版仅完成静态检查，尚未板端验证。
