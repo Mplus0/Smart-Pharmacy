@@ -20,7 +20,7 @@ options = {
   trajectory_builder = TRAJECTORY_BUILDER,
   map_frame = "map",
   tracking_frame = "base_footprint",
-  published_frame = "base_footprint",
+  published_frame = "odom",
   --tracking_frame = "base_laser_link",
   --published_frame = "base_laser_link",
   
@@ -28,7 +28,7 @@ options = {
   --published_frame = "base_footprint",
   
   odom_frame = "odom",
-  provide_odom_frame = true,
+  provide_odom_frame = false,
   publish_frame_projected_to_2d = false,
   use_odometry = true,
   use_nav_sat = false,
