@@ -1,7 +1,7 @@
 shutdown_costmaps: false
 controller_frequency: 10
 controller_patience: 3
-planner_frequency: 0
+planner_frequency: 0.0
 planner_patience: 1.5
 conservative_reset_dist: 0.1
 oscillation_timeout: 8
