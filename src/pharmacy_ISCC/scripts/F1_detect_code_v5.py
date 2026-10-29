@@ -525,11 +525,16 @@ def init_ros_node_and_publishers():
 def main():
     """程序入口。"""
     global board2_templates
+    global BOARD2_RESULT_SOURCE
+    global CAMERA_FALLBACK_TO_HTTP
 
     init_ros_node_and_publishers()
+    BOARD2_RESULT_SOURCE = rospy.get_param('~board2_result_source', '') or BOARD2_RESULT_SOURCE
+    BOARD2_CFG['result_source'] = BOARD2_RESULT_SOURCE
+    CAMERA_FALLBACK_TO_HTTP = rospy.get_param('~camera_fallback_to_http', CAMERA_FALLBACK_TO_HTTP)
     rate = rospy.Rate(LIMIT_RATE_HZ)
-    if BOARD2_RESULT_SOURCE not in ('tcp', 'vision'):
-        raise ValueError('board2.result_source must be tcp or vision')
+    if BOARD2_RESULT_SOURCE not in ('tcp', 'vision', 'yolo'):
+        raise ValueError('board2.result_source must be tcp, vision or yolo')
     if BOARD2_RESULT_SOURCE == 'vision':
         board2_templates = load_board2_templates()
 
@@ -602,12 +607,18 @@ def main():
         elif current_nav_state == STATE_BOARD2_RECOGNIZING:
             rospy.loginfo_throttle(1.0, "到达识别板二，开始识别")
             frame = rotate_frame(frame, FRAME_ROTATE_ANGLE)
-            if BOARD2_FORCE_LABEL_FOR_DEBUG:
+            visit = board2_visit
+            if BOARD2_FORCE_LABEL_FOR_DEBUG and BOARD2_RESULT_SOURCE != 'yolo':
                 rospy.logwarn_throttle(1.0, "识别板二使用强制调试结果: %s", BOARD2_FORCE_LABEL_FOR_DEBUG)
                 board2_label = BOARD2_FORCE_LABEL_FOR_DEBUG
                 board2_score = BOARD2_FORCE_SCORE_FOR_DEBUG
             else:
-                board2_label, board2_score = detect_board2_status(frame, board2_templates)
+                board2_label, board2_score = detect_board2_status(
+                    frame, board2_templates, visit=visit,
+                    is_active=lambda visit=visit: current_nav_state == STATE_BOARD2_RECOGNIZING and board2_visit == visit)
+
+            if current_nav_state != STATE_BOARD2_RECOGNIZING or visit != board2_visit:
+                continue
 
             board2_publish_data = stable_publish_board2(board2_label, board2_score)
 

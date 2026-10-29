@@ -32,8 +32,11 @@
     },
 
     "board2": {
-        # tcp：从键盘服务端获取结果；vision：使用下方模板识别配置。
-        "result_source": "tcp",
+        # yolo：本机 ONNX；tcp：保留原键盘服务；vision：保留模板识别。
+        "result_source": "yolo",
+        "yolo_python": "/home/EPRobot/.local/share/pharmacy-board2/runtime-20261029_2323/bin/python",
+        "yolo_model_dir": "resources/board2_yolo",
+        "yolo_timeout_sec": 10.0,
         "tcp_default_label": "free",  # Default when no valid TCP result is available.
         "tcp_host": "192.168.124.10",  # 修改为运行键盘服务端的电脑地址。
         "tcp_port": 9100,

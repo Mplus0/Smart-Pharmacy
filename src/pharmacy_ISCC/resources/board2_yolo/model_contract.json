@@ -1,0 +1,56 @@
+{
+  "classes": {
+    "status": [
+      "busy",
+      "idle"
+    ],
+    "number": [
+      "10",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ]
+  },
+  "roi": {
+    "status": [
+      229,
+      91,
+      108,
+      59
+    ],
+    "number": [
+      258,
+      150,
+      57,
+      52
+    ]
+  },
+  "minimum_confidence": 0.9,
+  "number_normalization": "text_row_gray_v1",
+  "minimum_margin": 0.15,
+  "smoothing_frames": 5,
+  "black_threshold": 110,
+  "input": [
+    1,
+    3,
+    224,
+    224
+  ],
+  "preprocess": "white square pad, bilinear 224, RGB NCHW float32 /255",
+  "source_sha256": {
+    "number_best.pt": "5ac9653fc271a3aed43dd2378e849272339c3100fdcc5c2121feabee717ddece",
+    "status_best.pt": "124bf102252e200fd2735beea1a8d0e24af0c4be29b403c3b469a1beaa3ca9bc"
+  },
+  "number_adaptation": {
+    "base_pt_sha256": "5ac9653fc271a3aed43dd2378e849272339c3100fdcc5c2121feabee717ddece",
+    "active_pt_sha256": "29840de84a45d457321e08aed27dcf131eb7cd32eee2038accbad9e735663aa4",
+    "active_onnx_sha256": "9bedc149ec8b1ec90fca9ca761f8f8a3ed5b9b4e5cf602eb3fc4c5ae89a21651",
+    "scope": "last linear classification layer only; frozen backbone",
+    "training_manifest": "domain_adaptation/dataset_manifest.json",
+    "requires_fresh_live_acceptance": true,
+    "independent_test_images": 55,
+    "feature_cache_fingerprint": "58fe548273c18960c3f03586a9e7799705c3a5fa26ce5575a656a0b5b7f05e54"
+  }
+}

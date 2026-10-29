@@ -25,6 +25,7 @@ catkin_install_python(PROGRAMS
   tools/record_waypoint.py
   tools/waypoint_console.py
   tools/test_move_to_waypoint.py
+  tools/board2_visual_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

@@ -269,3 +269,36 @@ calculate_qr_lengths、normalize_qr_data、build_board1_msg 及重复 detect_err
 在同一局域网访问 `http://小车IP:8090`。提供环境启动、比赛放行、全部停止、
 只读状态及识别结果、按需视频与日志。使用源码路径运行，不依赖 catkin 安装。
 详见 [控制台说明](tools/web_console/README.md)。第一版仅完成静态检查，尚未板端验证。
+
+
+## Board2 native YOLO (2026-10-29)
+
+`config/vision.yaml` now selects `board2.result_source: yolo`. The existing `tcp` and `vision` (template) modes remain selectable. `board2_tcp.py`, the GET/newline JSON protocol, all tcp_* keys, vehicles.yaml and dual-car TCP code are unchanged. No automatic TCP fallback is used for an unrecognized YOLO image.
+
+The Python2 ROS vision node keeps its existing /camera/rgb/image_raw input, visit cancellation and /board2_return Int32MultiArray output. It sends JPEG frames through private subprocess pipes to Python3.6 ONNX Runtime; the worker never opens a camera, network port or ROS publisher. Models are under resources/board2_yolo. The contract pins ROI, class order, RGB/white-pad/224/NCHW preprocessing, five-frame averaging and conservative confidence/margin rejection. Each visit resets history. free -> [0,0]; busy_5..busy_10 -> [1,5..10]. The existing navigation business already selects WAIT-0.wav or WAIT-5..10.wav; its motion and timing logic is unchanged.
+
+Private runtime: `/home/EPRobot/.local/share/pharmacy-board2/runtime-20261029_2323/bin/python`. No system Python/ROS replacement.
+
+The live poster uses different text spacing from the dataset. `text_row_gray_v1` normalizes the complete lower text row to the dataset's median center x=236, top y=160 and height=42, preserving aspect ratio, and converts the number input to grayscale. Geometry is determined without a digit label. The original number ROI, confidence 0.90 and margin 0.15 remain fixed. Missing or incomplete text geometry abstains. Status classification keeps the original color input.
+
+The original-distance digit 9 required supervised domain adaptation. The active `number_best.onnx` SHA256 is `9bedc149ec8b1ec90fca9ca761f8f8a3ed5b9b4e5cf602eb3fc4c5ae89a21651`: only the final linear layer's weight/bias changed; the backbone and original local PT files remain intact. Training used the original training split plus confirmed field examples and shared label-preserving augmentations. Four original test images already seen in base training and one within-test duplicate were excluded, leaving 55 unique test images; all passed along with 60 validation and 29 separate field validation images. Cache fingerprints pin data, base model, worker/locator and training code. PT/ONNX maximum error was 1.19e-7, IR7/opset12. Dataset manifest, exclusions and metrics are in the external rollback anchor's `domain_adaptation` directory. Fresh live acceptance is recorded separately; dataset accuracy alone does not prove field success.
+
+Stationary recognition and speech only (camera must already provide the ROS image; do not start navigation):
+
+```bash
+source /home/EPRobot/robot_ws/devel/setup.bash
+roslaunch pharmacy_ISCC detect.launch state:=13 board2_result_source:=yolo speak_board2:=true camera_fallback_to_http:=false
+rosservice call /pharmacy_vision_debug/status
+# After changing the actual board and when speech has finished:
+rosservice call /pharmacy_vision_debug/rearm
+```
+
+This launch isolates nav_state and board2_return under /pharmacy_vision_debug and never starts F1_yaofang_v5, a chassis driver or an action client. One recognized result speaks once per explicitly armed visit. Unknown/no board produces no result and no speech. The regular business launch continues to use its original audio logic.
+
+To select the preserved TCP mode in the stationary tool, pass `board2_result_source:=tcp`; the configured original peer must be online. Simulated loopback protocol regression is not a real-peer acceptance.
+
+File rollback anchor and scripts: `/home/EPRobot/robot_ws_diagnostics/20261029_2323_board2_deploy`. Run `python3 .../rollback_robot.py` to stop only this deployment's stationary processes, restore the enumerated original files from the verified archive, and quarantine additions/private runtime. The original startup state was all task processes stopped. Rollback does not execute Git commands. The initial deployment used file backups only; a later explicitly authorized Git publish preserves the pre-YOLO source checkpoint and the deployment as separate commits. The file archive also preserves permissions and files outside the tracked Git snapshot.
+
+Private Python3.6 dependency versions: numpy 1.19.5, opencv-python-headless 4.5.5, onnxruntime 1.10.0, dataclasses 0.8, protobuf 3.19.6 and flatbuffers 1.12. Offline wheels, pinned package output and the original environment snapshot remain in the external rollback anchor and its local mirror.
+
+Live acceptance was paused by the operator before Git publication. The final number model passed fresh original-position 5, 9, 10 and idle image/result/single-play-call tests; original-position 9, 10 and idle sound was confirmed on site. Final-model 6, 7 and 8 live regression and final-model 5 hearing confirmation remain pending (the earlier model's 5-8 sound was confirmed). The old idle result was observed clearing to null in 22ms before the new [1,5] result, with no speech during clearing. Physical no-board testing was skipped following operator steering. Real TCP peer testing remains deferred; source/config and simulated protocol regression are preserved. No navigation or actuator task was run.
