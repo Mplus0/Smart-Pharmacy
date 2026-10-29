@@ -35,7 +35,7 @@
         # tcp：从键盘服务端获取结果；vision：使用下方模板识别配置。
         "result_source": "tcp",
         "tcp_default_label": "free",  # Default when no valid TCP result is available.
-        "tcp_host": "192.168.124.24",  # 修改为运行键盘服务端的电脑地址。
+        "tcp_host": "192.168.124.10",  # 修改为运行键盘服务端的电脑地址。
         "tcp_port": 9100,
         "tcp_timeout_sec": 1.0,
         "tcp_retry_interval_sec": 0.2,

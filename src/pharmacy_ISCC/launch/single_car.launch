@@ -1,6 +1,6 @@
 <launch>
-  <!-- Reuse the running navigation and camera. One complete delivery cycle. -->
-  <arg name="max_rounds" default="3"/>
+  <!-- Reuse navigation and camera. Refresh board one after two deliveries; run until stopped. -->
+  <arg name="max_rounds" default="0"/>
   <include file="$(find pharmacy_ISCC)/launch/pharmacy_main.launch">
     <arg name="car_id" value="1"/>
     <arg name="start_dual_tcp" value="false"/>

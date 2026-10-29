@@ -176,6 +176,7 @@ class MoveBaseSquare(object):
         self.board1_received = False
         self.board2_received = False
         self.pending_board1_tasks = []  # 单车本批次尚未开始的任务。
+        self.deliveries_since_board1_recognition = 0
 
         # 取样窗口完成标志：用于失败重试时跳过已经去过的窗口
         self.pickup_C_done = False
@@ -254,7 +255,7 @@ class MoveBaseSquare(object):
             rate.sleep()
 
     def handle_go_to_board1(self):
-        """状态 9：从起点前往识别板一。"""
+        """状态 9：前往识别板一，加载缓存任务或重新识别。"""
         # [DUAL-ADD] 双车模式下，如果还没有令牌，不允许从起点出发。
         if self.enable_dual_car and not self.have_turn:
             rospy.loginfo_throttle(2.0, "[双车] car%s 当前没有出发令牌，继续等待 car%s done",
@@ -396,11 +397,17 @@ class MoveBaseSquare(object):
 
             if rospy.is_shutdown():
                 return
-            if not self.enable_dual_car and self.pending_board1_tasks:
-                # 保留剩余任务，先经过板一停车点，不返回起点。
+            if not self.enable_dual_car:
+                self.deliveries_since_board1_recognition += 1
+                if self.deliveries_since_board1_recognition >= 2 or not self.pending_board1_tasks:
+                    # 每完成两项即作废旧缓存；不足两项时提前重新识别。
+                    self.pending_board1_tasks = []
+                    rospy.loginfo("本批已完成 %s 项配送，直接返回板一重新识别",
+                                  self.deliveries_since_board1_recognition)
+                else:
+                    rospy.loginfo("本项配送完成，先经过板一再执行本批第二项任务")
                 self.count = STATE_GO_TO_BOARD1
                 self.pub_nav_state.publish(self.count)
-                rospy.loginfo("本项配送完成，先经过板一再执行剩余任务")
                 return
 
             # [DUAL-MOD-STATE15] 进入状态15的瞬间释放令牌。
@@ -424,7 +431,7 @@ class MoveBaseSquare(object):
             self.clear_costmaps_service()
             rospy.sleep(NAV_CFG["home_arrive_sleep_sec"])
 
-            # 单车每轮为整板任务全部完成后返回起点；双车仍按原单任务计数。
+            # 双车仍按原单任务计数；单车连续配送不经过返回起点状态。
             self.completed_rounds += 1
             if self.max_rounds and self.completed_rounds >= self.max_rounds:
                 rospy.loginfo("FULL RUN COMPLETE: %s round(s), stopped at home", self.completed_rounds)
@@ -829,6 +836,7 @@ class MoveBaseSquare(object):
                 destinations.add(task[4])
             # 双车仍只执行首项，原有 all_text 共享与对车选择逻辑不变。
             self.pending_board1_tasks = [] if self.enable_dual_car else tasks[1:]
+            self.deliveries_since_board1_recognition = 0
             self.ram_result = tasks[0]
             rospy.loginfo("识别到二维码并已经选择了最优方案：%s....正在更新参数", msg.data)
             rospy.logwarn("self.ram_result: %s", self.ram_result)
