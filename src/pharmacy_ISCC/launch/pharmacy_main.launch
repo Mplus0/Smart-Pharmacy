@@ -5,6 +5,7 @@
   <arg name="max_rounds" default="1"/>
   <arg name="car_id" default="1" doc="车辆编号：1 或 2"/>
   <arg name="output" default="screen" doc="节点日志输出：screen 或 log"/>
+  <arg name="wait_for_startup_ready" default="false"/>
 
   <!-- 主业务节点 -->
   <arg name="start_dual_tcp" default="true" doc="启动双车 TCP 通信节点"/>
@@ -42,6 +43,8 @@
         respawn="$(arg respawn_detect)"
         launch-prefix="bash -c 'sleep $(arg detect_start_delay); exec &quot;$@&quot;' _">
     <env name="CAR_ID" value="$(arg car_id)"/>
+    <param name="camera_fallback_to_http" value="false"/>
+    <param name="startup_ready" value="false"/>
   </node>
 
   <!-- 药房导航状态机最后启动 -->
@@ -55,6 +58,7 @@
     <env name="CAR_ID" value="$(arg car_id)"/>
     <param name="enable_dual_car" value="$(arg enable_dual_car)"/>
     <param name="max_rounds" value="$(arg max_rounds)"/>
+    <param name="wait_for_startup_ready" value="$(arg wait_for_startup_ready)"/>
     <param name="dual_publish_repeat" value="$(arg dual_publish_repeat)"/>
     <param name="dual_publish_interval" value="$(arg dual_publish_interval)"/>
   </node>

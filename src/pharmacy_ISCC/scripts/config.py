@@ -5,9 +5,11 @@ import os
 import rospkg
 import yaml
 
+_ROS_PACK = rospkg.RosPack()
+
 
 def package_path(*parts):
-    return os.path.join(rospkg.RosPack().get_path("pharmacy_ISCC"), *parts)
+    return os.path.join(_ROS_PACK.get_path("pharmacy_ISCC"), *parts)
 
 
 def records_path():

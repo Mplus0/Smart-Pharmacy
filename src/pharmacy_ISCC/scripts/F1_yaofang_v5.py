@@ -41,7 +41,6 @@ from std_srvs.srv import Empty, Trigger, TriggerResponse
 import time
 
 from pharmacy_iscc.config import COMMON, get_car_config, get_car_id
-from pharmacy_iscc.board1_detector import select_board1_from_all_text
 from pharmacy_iscc.recognition_records import RecognitionRecords
 from pharmacy_iscc.audio import play_audio
 
@@ -81,10 +80,47 @@ class MoveBaseSquare(object):
         self.init_move_base_client()
         # Reuse only the map/localization checks before sending a goal.
         self.arrival_guard = NavigationGuard(argparse.Namespace())
+        if rospy.get_param('~wait_for_startup_ready', False):
+            if not self.wait_for_startup_ready():
+                return
 
         if self.wait_for_manual_start():
             rospy.loginfo("已收到手动启动指令，开始任务！")
             self.run_state_machine()
+
+    def wait_for_startup_ready(self):
+        """快速合并启动时按视觉、RGB与定位实际就绪情况放行，无固定延时。"""
+        from sensor_msgs.msg import Image, CompressedImage
+        config = NAV_CFG['startup']
+        topic = COMMON['detect'].get('camera_topic', '/camera/rgb/image_raw')
+        source = COMMON['detect'].get('image_source', 'ros_topic')
+        image_type = CompressedImage if source == 'ros_compressed' or topic.endswith('/compressed') else Image
+        deadline = time.time() + float(config['ready_timeout_sec'])
+        ready_param = config['vision_node'].rstrip('/') + '/startup_ready'
+        while not rospy.is_shutdown() and time.time() < deadline:
+            if rospy.get_param(ready_param, False):
+                try:
+                    image = rospy.wait_for_message(topic, image_type, timeout=min(
+                        0.5, max(0.01, deadline - time.time())))
+                    age = (rospy.Time.now() - image.header.stamp).to_sec()
+                    if (not image.data or image.header.stamp.to_sec() <= 0
+                            or not -0.1 <= age <= float(config['image_max_age_sec'])):
+                        raise ValueError('RGB image is empty or stale')
+                    grid, unused = self.arrival_guard.grid()
+                    point = self.waypoints[9].position
+                    validate_target(grid, target_pose(point.x, point.y, 0.0))
+                    self.arrival_guard.pose()
+                    rospy.loginfo('相机、识别、地图与定位已就绪，可以发车')
+                    return True
+                except (rospy.ROSException, ValueError) as exc:
+                    rospy.loginfo_throttle(2.0, '等待启动就绪: %s', exc)
+            else:
+                rospy.loginfo_throttle(2.0, '等待相机与识别就绪...')
+            rospy.sleep(1.0 / float(config['poll_rate_hz']))
+        if not rospy.is_shutdown():
+            rospy.logerr('启动就绪检查超时，未放行小车')
+            rospy.signal_shutdown('Startup readiness timed out')
+        return False
 
     def wait_for_manual_start(self):
         """初始化完成后提供启动服务，放行前不进入导航状态机。"""
@@ -172,6 +208,8 @@ class MoveBaseSquare(object):
 
         self.ram_result = [1, 1, 1, 3, 3]
         self.board2_result = [0, 0]
+        self.board2_result_lock = threading.Lock()
+        self.board2_recognition_deadline = None
 
         self.board1_received = False
         self.board2_received = False
@@ -221,8 +259,6 @@ class MoveBaseSquare(object):
             queue_size=10
         )
 
-        rospy.sleep(0.5)
-
     def init_move_base_client(self):
         """连接 move_base，并准备清除代价地图服务。"""
         self.move_base = actionlib.SimpleActionClient(TOPICS["move_base_action"], MoveBaseAction)
@@ -253,6 +289,21 @@ class MoveBaseSquare(object):
             elif self.count == STATE_GO_BACK_HOME:
                 self.handle_go_back_home()
             rate.sleep()
+
+    def move_via_points(self, points, board_name, transition=None):
+        """依次到达引导点；中途保持原导航状态，不触发识别。"""
+        for index, point in enumerate(points, 1):
+            if rospy.is_shutdown():
+                return False
+            orientation = Quaternion(*quaternion_from_euler(
+                0, 0, radians(float(point["yaw_deg"]))))
+            pose = Pose(Point(float(point["x"]), float(point["y"]), 0),
+                        orientation)
+            rospy.loginfo("[%s-APPROACH] 前往引导点%s: x=%.3f y=%.3f yaw=%.1f",
+                          board_name, index, point["x"], point["y"], point["yaw_deg"])
+            if not self.move(self.make_goal(pose), transition=transition):
+                return False
+        return not rospy.is_shutdown()
 
     def handle_go_to_board1(self):
         """状态 9：前往识别板一，加载缓存任务或重新识别。"""
@@ -294,12 +345,13 @@ class MoveBaseSquare(object):
                 return
             rospy.loginfo("已经到达识别板一，正在识别！")
             self.board1_received = False #重置识别版一接受状态
+            recognition_started = time.time()
             self.count = STATE_BOARD1_RECOGNIZING
             self.pub_nav_state.publish(self.count)
-            self.clear_costmaps_service()
             # 等待识别板一真正识别成功
-            if self.wait_for_board1_result():
+            if self.wait_for_board1_result(start_time=recognition_started):
                 rospy.loginfo("识别板一识别成功，准备前往取样窗口")
+                self.clear_costmaps_service()
                 self.count = STATE_GO_TO_PICKUP_WINDOWS
                 self.pub_nav_state.publish(self.count)
         else:
@@ -349,20 +401,77 @@ class MoveBaseSquare(object):
         self.count = STATE_GO_TO_BOARD2
         self.pub_nav_state.publish(self.count)
 
+    def move_to_board2(self):
+        """按原速度连续接近上方过渡点，切换前恢复正常容差和终速约束。"""
+        route = NAV_CFG["board2_approach"]
+        if not route["enabled"]:
+            return self.move(self.make_goal(self.waypoints[8]))
+
+        client = None
+        original_settings = None
+        reached = False
+        failure = None
+        try:
+            timeout = float(route["config_timeout_sec"])
+            client = self.arrival_guard.configuration_client(route["planner_namespace"], timeout)
+            original = client.get_configuration(timeout=timeout)
+            descriptions = client.get_parameter_descriptions(timeout=timeout)
+            if original is None or descriptions is None:
+                raise RuntimeError("TEB configuration is unavailable")
+            names = ("xy_goal_tolerance", "yaw_goal_tolerance", "free_goal_vel")
+            original_settings = dict((name, original[name]) for name in names)
+            settings = {
+                "xy_goal_tolerance": max(float(original_settings["xy_goal_tolerance"]),
+                                         float(route["xy_goal_tolerance"])),
+                "yaw_goal_tolerance": max(float(original_settings["yaw_goal_tolerance"]),
+                                          radians(float(route["yaw_goal_tolerance_deg"]))),
+                "free_goal_vel": bool(route["free_goal_vel"]),
+            }
+            applied = client.update_configuration(dict(settings))
+            if any(abs(float(applied[name]) - float(settings[name])) > 1e-6 for name in names):
+                raise RuntimeError("TEB transition settings were not applied")
+            rospy.loginfo("[BOARD2-APPROACH] 不额外限速，过渡点临时设置: %s", settings)
+
+            reached = self.move_via_points(route["via_points"], "BOARD2", transition=route)
+        except Exception as exc:
+            if not rospy.is_shutdown():
+                rospy.logerr("[BOARD2-APPROACH] 上方进场失败: %s", exc)
+                failure = "Board2 approach failed"
+        finally:
+            if client is not None:
+                try:
+                    if original_settings is not None:
+                        restored = client.update_configuration(dict(original_settings))
+                        if any(abs(float(restored[name]) - float(value)) > 1e-6
+                               for name, value in original_settings.items()):
+                            raise RuntimeError("TEB transition settings were not restored")
+                        rospy.loginfo("[BOARD2-APPROACH] 已恢复原容差和终速约束")
+                except Exception as exc:
+                    rospy.logerr("[BOARD2-APPROACH] 恢复过渡设置失败: %s", exc)
+                    failure = "Board2 approach configuration restore failed"
+        if failure is not None and not rospy.is_shutdown():
+            rospy.signal_shutdown(failure)
+        if not reached or rospy.is_shutdown():
+            return False
+        return self.move(self.make_goal(self.waypoints[8]))
+
     def handle_go_to_board2(self):
         """状态 12：前往识别板二，并根据识别板二结果决定是否等待。"""
         rospy.loginfo("正在前往识别板2！")
-        self.board2_result = [0, 0]
-        self.board2_received = False #重置识别板二接收状态
+        with self.board2_result_lock:
+            self.board2_result = [0, 0]
+            self.board2_received = False
+            self.board2_recognition_deadline = None
 
-        goal = self.make_goal(self.waypoints[8])
-        if self.move(goal) is True:
+        if self.move_to_board2() is True:
+            timeout = float(NAV_CFG["board2_wait_timeout_sec"])
+            with self.board2_result_lock:
+                self.board2_recognition_deadline = time.time() + timeout if timeout > 0 else None
             rospy.loginfo("已经到达识别板2！正在识别！")
             self.count = STATE_BOARD2_RECOGNIZING
             self.pub_nav_state.publish(self.count)
-            self.clear_costmaps_service()
             if self.wait_for_board2_result():
-                rospy.loginfo("识别板二识别成功，结果为: %s", self.board2_result)
+                rospy.loginfo("识别板二处理完成，采用结果: %s", self.board2_result)
 
                 if self.board2_result[0] == 1:
                     wait_time = self.board2_result[1]
@@ -379,6 +488,7 @@ class MoveBaseSquare(object):
                     rospy.loginfo("化验区空闲，无需等待")
                     play_audio("WAIT-0.wav")
 
+                self.clear_costmaps_service()
                 self.count = STATE_GO_TO_LAB_WINDOW
                 self.pub_nav_state.publish(self.count)
         else:
@@ -402,11 +512,11 @@ class MoveBaseSquare(object):
                 if self.deliveries_since_board1_recognition >= 2 or not self.pending_board1_tasks:
                     # 每完成两项即作废旧缓存；不足两项时提前重新识别。
                     self.pending_board1_tasks = []
-                    rospy.loginfo("本批已完成 %s 项配送，直接返回板一重新识别",
+                    rospy.loginfo("本批已完成 %s 项配送，先返回原点，再前往板一重新识别",
                                   self.deliveries_since_board1_recognition)
                 else:
-                    rospy.loginfo("本项配送完成，先经过板一再执行本批第二项任务")
-                self.count = STATE_GO_TO_BOARD1
+                    rospy.loginfo("本项配送完成，先返回原点，再经过板一执行本批第二项任务")
+                self.count = STATE_GO_BACK_HOME
                 self.pub_nav_state.publish(self.count)
                 return
 
@@ -419,25 +529,125 @@ class MoveBaseSquare(object):
             rospy.logerr("前往化验窗口失败，重新尝试")
             return
 
+    def stop_at_home(self, config):
+        """原点到达后持续发零速度，等待新鲜里程计确认车辆已经停稳。"""
+        from nav_msgs.msg import Odometry
+        deadline = time.time() + float(config["stop_timeout_sec"])
+        stationary_since = None
+        last_stamp = 0.0
+        while not rospy.is_shutdown():
+            self.cmd_vel_pub.publish(Twist())
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            try:
+                odom = rospy.wait_for_message(config["odom_topic"], Odometry,
+                                              timeout=min(0.5, remaining))
+            except rospy.ROSException:
+                stationary_since = None
+                continue
+            stamp = odom.header.stamp
+            stamp_sec = stamp.to_sec()
+            age = (rospy.Time.now() - stamp).to_sec()
+            velocity = odom.twist.twist
+            speed = (velocity.linear.x ** 2 + velocity.linear.y ** 2) ** 0.5
+            if (stamp_sec > last_stamp and 0 <= age <= float(config["odom_max_age_sec"])
+                    and speed <= float(config["stop_linear_speed"])
+                    and abs(velocity.angular.z) <= float(config["stop_angular_speed"])):
+                now = time.time()
+                if stationary_since is None:
+                    stationary_since = now
+                if now - stationary_since >= float(config["stop_hold_sec"]):
+                    rospy.loginfo("[HOME-ARRIVAL] 原点停车已确认")
+                    return True
+            else:
+                stationary_since = None
+            last_stamp = max(last_stamp, stamp_sec)
+        self.cmd_vel_pub.publish(Twist())
+        if not rospy.is_shutdown():
+            rospy.logerr("[HOME-ARRIVAL] 未能在规定时间内确认停车，停止任务")
+            rospy.signal_shutdown("Home stop confirmation failed")
+        return False
+
+    def move_to_home(self, pass_through=False):
+        """回原点时临时放宽容差；可连续出发时提前交接，否则保持停车确认。"""
+        config = NAV_CFG["home_arrival"]
+        client = None
+        original_tolerances = None
+        reached = False
+        failure = None
+        try:
+            timeout = float(config["config_timeout_sec"])
+            client = self.arrival_guard.configuration_client(config["planner_namespace"], timeout)
+            original = client.get_configuration(timeout=timeout)
+            descriptions = client.get_parameter_descriptions(timeout=timeout)
+            if original is None or descriptions is None:
+                raise RuntimeError("TEB configuration is unavailable")
+            names = ("xy_goal_tolerance", "yaw_goal_tolerance")
+            if pass_through:
+                names += ("free_goal_vel",)
+            original_tolerances = dict((name, original[name]) for name in names)
+            tolerances = {
+                "xy_goal_tolerance": max(float(original_tolerances["xy_goal_tolerance"]),
+                                         float(config["xy_goal_tolerance"])),
+                "yaw_goal_tolerance": max(float(original_tolerances["yaw_goal_tolerance"]),
+                                          radians(float(config["yaw_goal_tolerance_deg"]))),
+            }
+            if pass_through:
+                tolerances["free_goal_vel"] = bool(config["free_goal_vel"])
+            applied = client.update_configuration(dict(tolerances))
+            if any(abs(float(applied[name]) - tolerances[name]) > 1e-6 for name in names):
+                raise RuntimeError("Home goal tolerances were not applied")
+            rospy.loginfo("[HOME-ARRIVAL] 原点临时设置: %s，经过模式=%s", tolerances, pass_through)
+            if not rospy.is_shutdown():
+                reached = self.move(self.make_goal(self.waypoints[7]),
+                                    transition=config if pass_through else None)
+                if reached and not pass_through:
+                    reached = self.stop_at_home(config)
+        except Exception as exc:
+            if not rospy.is_shutdown():
+                rospy.logerr("[HOME-ARRIVAL] 返回原点失败: %s", exc)
+                failure = "Home arrival failed"
+        finally:
+            if client is not None:
+                try:
+                    if original_tolerances is not None:
+                        restored = client.update_configuration(dict(original_tolerances))
+                        if any(abs(float(restored[name]) - float(value)) > 1e-6
+                               for name, value in original_tolerances.items()):
+                            raise RuntimeError("Original goal tolerances were not restored")
+                        rospy.loginfo("[HOME-ARRIVAL] 已恢复原到达容差: %s", original_tolerances)
+                except Exception as exc:
+                    rospy.logerr("[HOME-ARRIVAL] 恢复到达容差失败: %s", exc)
+                    failure = "Home goal tolerance restore failed"
+        if failure is not None and not rospy.is_shutdown():
+            rospy.signal_shutdown(failure)
+        return reached and not rospy.is_shutdown()
+
     def handle_go_back_home(self):
-        """状态 15：送完样本后先回到原点，再前往识别板一。"""
+        """状态15：连续任务经过原点直接前往板一，等待令牌或结束时停车。"""
         rospy.loginfo("送样完成，正在返回原点！")
         self.pub_nav_state.publish(STATE_GO_BACK_HOME)
 
-        goal = self.make_goal(self.waypoints[7])
+        finishing = (self.enable_dual_car and self.max_rounds
+                     and self.completed_rounds + 1 >= self.max_rounds)
+        can_continue = not self.enable_dual_car or (self.peer_done_pending and not finishing)
+        pass_through = bool(NAV_CFG["home_arrival"]["pass_through"]) and can_continue
 
-        if self.move(goal) is True:
-            rospy.loginfo("已经回到原点，准备前往识别板一！")
-            self.clear_costmaps_service()
-            rospy.sleep(NAV_CFG["home_arrive_sleep_sec"])
+        if self.move_to_home(pass_through=pass_through) is True:
+            rospy.loginfo("已经过原点，准备前往识别板一！")
+            if not pass_through:
+                self.clear_costmaps_service()
+                rospy.sleep(NAV_CFG["home_arrive_sleep_sec"])
 
-            # 双车仍按原单任务计数；单车连续配送不经过返回起点状态。
-            self.completed_rounds += 1
-            if self.max_rounds and self.completed_rounds >= self.max_rounds:
-                rospy.loginfo("FULL RUN COMPLETE: %s round(s), stopped at home", self.completed_rounds)
-                self.export_recognition_records()
-                rospy.signal_shutdown("Full run complete at home")
-                return
+            # 双车保持原轮数结束判断；单车只增加回原点路线，保持连续配送。
+            if self.enable_dual_car:
+                self.completed_rounds += 1
+                if self.max_rounds and self.completed_rounds >= self.max_rounds:
+                    rospy.loginfo("FULL RUN COMPLETE: %s round(s), stopped at home", self.completed_rounds)
+                    self.export_recognition_records()
+                    rospy.signal_shutdown("Full run complete at home")
+                    return
 
             # [DUAL-MOD] 原来这里直接进入下一轮 STATE_GO_TO_BOARD1。
             # 双车模式下，本车回到起点后等待另一辆车的 done；单车模式保持原逻辑。
@@ -453,6 +663,9 @@ class MoveBaseSquare(object):
             else:
                 self.count = STATE_GO_TO_BOARD1
                 self.pub_nav_state.publish(self.count)
+            if pass_through and self.count == STATE_GO_TO_BOARD1 and not rospy.is_shutdown():
+                # 同一次状态处理内交接目标，避免主循环等待造成原点停顿。
+                self.handle_go_to_board1()
         else:
             rospy.logerr("返回原点失败，重新尝试返回原点")
             return
@@ -632,6 +845,7 @@ class MoveBaseSquare(object):
         remaining_all_text = list(all_text)
         remaining_all_text[selected_index] = ""
 
+        from pharmacy_iscc.board1_detector import select_board1_from_all_text
         selection = select_board1_from_all_text(remaining_all_text)
         if selection is None:
             rospy.loginfo("[BOARD1-SHARE] 去掉对车已选项后无剩余有效二维码，回退本车识别")
@@ -686,38 +900,79 @@ class MoveBaseSquare(object):
         goal.target_pose.pose = pose
         return goal
 
-    def wait_for_board1_result(self):
-        """等待识别板一识别成功；配置为 0 时沿用旧逻辑无限等待。"""
+    def wait_for_board1_result(self, start_time=None):
+        """3秒无结果后退一次；再3秒无结果回识别点一次，仍保留总超时。"""
         rospy.loginfo("等待识别板一识别结果...")
         timeout = float(NAV_CFG["board1_wait_timeout_sec"])
-        start_time = time.time()
+        start_time = time.time() if start_time is None else start_time
+        recovery = NAV_CFG["board1_recovery"]
+        stage = 0
+        stage_deadline = start_time + float(recovery["recognition_wait_sec"])
         rate = rospy.Rate(NAV_CFG["wait_result_rate_hz"])
         while not rospy.is_shutdown() and not self.board1_received:
             if timeout > 0 and (time.time() - start_time) > timeout:
                 rospy.logerr("识别板一等待超时 %.1f 秒，返回失败", timeout)
                 rospy.signal_shutdown("Board1 recognition timed out")
                 return False
+            if recovery["enabled"] and stage < 2 and time.time() >= stage_deadline:
+                if self.board1_received:
+                    break
+                if stage == 0:
+                    rospy.logwarn("[BOARD1-RECOVERY] %.1f秒无任务，沿当前车身方向后退%.0f厘米",
+                                  recovery["recognition_wait_sec"], 100.0 * recovery["reverse_distance_m"])
+                    if self.move_base.get_state() in (GoalStatus.PENDING, GoalStatus.ACTIVE,
+                                                     GoalStatus.PREEMPTING, GoalStatus.RECALLING):
+                        rospy.logerr("[BOARD1-RECOVERY] 导航目标仍活动，不叠加后退控制")
+                        rospy.signal_shutdown("Board1 reverse requires inactive navigation")
+                        return False
+                    try:
+                        distance = self.arrival_guard.short_reverse(
+                            self.cmd_vel_pub, recovery,
+                            force_reverse=recovery.get("force_reverse", False))
+                    except Exception as exc:
+                        rospy.logerr("[BOARD1-RECOVERY] 后退中止: %s", exc)
+                        rospy.signal_shutdown("Board1 reverse failed")
+                        return False
+                    if distance is None:
+                        rospy.logwarn("[BOARD1-RECOVERY] 本次未执行后退，原地再等待识别")
+                    else:
+                        rospy.loginfo("[BOARD1-RECOVERY] 后退结束，里程计距离=%.3f米，重新等待识别", distance)
+                    # 保持状态10：视觉继续识别。运动期间收到任务，也必须等本次停车后再执行。
+                    stage = 1
+                    stage_deadline = time.time() + float(recovery["recognition_wait_sec"])
+                else:
+                    rospy.logwarn("[BOARD1-RECOVERY] 后退后仍无任务，重新导航到板一识别点")
+                    self.count = STATE_GO_TO_BOARD1
+                    self.pub_nav_state.publish(self.count)
+                    if not self.move(self.make_goal(self.waypoints[9])):
+                        return False
+                    self.count = STATE_BOARD1_RECOGNIZING
+                    self.pub_nav_state.publish(self.count)
+                    # 状态9->10让视觉清空旧历史、重新允许发布；不丢弃已收到的有效任务。
+                    stage = 2
+                    rospy.loginfo("[BOARD1-RECOVERY] 已回板一识别点，使用剩余总等待时间重试")
+                continue
             rospy.loginfo_throttle(1.0, "识别板一尚未识别成功，继续等待...")
             rate.sleep()
-        return self.board1_received
+        return self.board1_received and not rospy.is_shutdown()
 
     def wait_for_board2_result(self):
-        """等待识别板二识别成功；配置为 0 时沿用旧逻辑无限等待。"""
+        """从最终板二点到达起等待；超时按空闲继续，配置0时不设截止时间。"""
         rospy.loginfo("等待识别板二识别结果...")
         timeout = float(NAV_CFG["board2_wait_timeout_sec"])
-        start_time = time.time()
         rate = rospy.Rate(NAV_CFG["wait_result_rate_hz"])
         while not rospy.is_shutdown() and not self.board2_received:
-            if timeout > 0 and (time.time() - start_time) > timeout:
-                rospy.logerr("识别板二等待超时 %.1f 秒，返回失败", timeout)
-                rospy.signal_shutdown("Board2 recognition timed out")
-                return False
+            deadline = self.board2_recognition_deadline
+            if deadline is not None and time.time() >= deadline:
+                if self.accept_board2_result(0, 0, timed_out=True):
+                    rospy.logwarn("识别板二到点后 %.1f 秒无有效结果，按空闲处理", timeout)
+                return self.board2_received and not rospy.is_shutdown()
             rospy.loginfo_throttle(1.0, "识别板二尚未识别成功，继续等待...")
             rate.sleep()
-        return self.board2_received
+        return self.board2_received and not rospy.is_shutdown()
 
-    def move(self, goal):
-        """发送导航目标，并等待 move_base 返回结果。"""
+    def move(self, goal, transition=None):
+        """普通目标等待完成；过渡目标接近后直接交接下一目标，不主动停车。"""
         requested = target_pose(goal.target_pose.pose.position.x,
                                 goal.target_pose.pose.position.y,
                                 quaternion_yaw([goal.target_pose.pose.orientation.x,
@@ -733,7 +988,34 @@ class MoveBaseSquare(object):
             rospy.signal_shutdown("Navigation preflight rejected")
             return False
         self.move_base.send_goal(goal)
-        finished_within_time = self.move_base.wait_for_result(rospy.Duration(NAV_CFG["move_timeout_sec"]))
+        if transition is None:
+            finished_within_time = self.move_base.wait_for_result(rospy.Duration(NAV_CFG["move_timeout_sec"]))
+        else:
+            finished_within_time = False
+            deadline = time.time() + float(NAV_CFG["move_timeout_sec"])
+            while not rospy.is_shutdown() and time.time() < deadline:
+                interval = min(1.0 / float(transition["poll_rate_hz"]), deadline - time.time())
+                if interval <= 0:
+                    break
+                if self.move_base.wait_for_result(rospy.Duration(interval)):
+                    finished_within_time = True
+                    break
+                try:
+                    pose = self.arrival_guard.pose()
+                except Exception as exc:
+                    rospy.logerr("过渡点交接定位不可用: %s", exc)
+                    self.move_base.cancel_goal()
+                    rospy.signal_shutdown("Transition localization unavailable")
+                    return False
+                distance = ((pose["x"] - requested["x"]) ** 2 +
+                            (pose["y"] - requested["y"]) ** 2) ** 0.5
+                yaw_error = abs((pose["yaw_deg"] - requested["yaw_deg"] + 180.0) % 360.0 - 180.0)
+                if (distance <= float(transition["switch_distance_m"])
+                        and yaw_error <= float(transition["switch_yaw_tolerance_deg"])):
+                    rospy.loginfo("[TRANSITION] 接近过渡点，直接交接下一目标: distance=%.3f yaw_error=%.1f",
+                                  distance, yaw_error)
+                    # 保持当前目标活动，由下一次 send_goal 接替；不 cancel、不发零速度。
+                    return True
 
         if not finished_within_time:
             self.move_base.cancel_goal()
@@ -843,44 +1125,46 @@ class MoveBaseSquare(object):
 
             self.apply_board1_selected_msg(self.ram_result)
 
+    def accept_board2_result(self, state, wait_time, timed_out=False):
+        """每次访问只提交一次；真实结果与超时默认结果互斥，迟到结果不覆盖。"""
+        with self.board2_result_lock:
+            if self.count != STATE_BOARD2_RECOGNIZING or self.board2_received:
+                return False
+            if (not timed_out and self.board2_recognition_deadline is not None
+                    and time.time() >= self.board2_recognition_deadline):
+                return False
+            self.board2_state = int(state)
+            self.board2_wait_time = int(wait_time)
+            self.board2_result = [int(state), int(wait_time)]
+            self.board2_received = True
+        content = {u'状态': u'空闲' if state == 0 else u'忙碌', u'等待秒数': int(wait_time)}
+        kind = u'识别结果'
+        if timed_out:
+            kind = u'超时默认'
+            content[u'原因'] = u'到点后未识别到板二'
+            content[u'超时秒数'] = float(NAV_CFG["board2_wait_timeout_sec"])
+        self.recognition_records.record(u'识别板二', kind, content)
+        return True
+
     def detect_board2_result(self, msg):
-        """识别板二回调：只在状态 13 时接收等待状态。"""
-        if self.count == STATE_BOARD2_RECOGNIZING:
-            data = list(msg.data)
-            if len(data) < 2:
-                rospy.logwarn("识别板2返回数据长度错误: %s", data)
-                return
-
-            state = int(data[0])
-            wait_time = int(data[1])
-
-            if state == 0:
-                self.board2_state = 0
-                self.board2_wait_time = 0
-                self.board2_result = [0, 0]
-                if not self.board2_received:
-                    self.recognition_records.record(u'识别板二', u'识别结果',
-                                                    {u'状态': u'空闲', u'等待秒数': 0})
-                self.board2_received = True
-
-            elif state == 1:
-                if wait_time < 5:
-                    rospy.logwarn("识别板2等待时间过小: %d，已修正为5秒", wait_time)
-                    wait_time = 5
-                elif wait_time > 10:
-                    rospy.logwarn("识别板2等待时间过大: %d，已修正为10秒", wait_time)
-                    wait_time = 10
-
-                self.board2_state = 1
-                self.board2_wait_time = wait_time
-                self.board2_result = [1, wait_time]
-
-                if not self.board2_received:
-                    self.recognition_records.record(u'识别板二', u'识别结果',
-                                                    {u'状态': u'忙碌', u'等待秒数': wait_time})
-
-
-                self.board2_received = True
+        """识别板二回调：状态13内、截止时间前只接收首个有效结果。"""
+        if self.count != STATE_BOARD2_RECOGNIZING or self.board2_received:
+            return
+        data = list(msg.data)
+        if len(data) < 2:
+            rospy.logwarn("识别板2返回数据长度错误: %s", data)
+            return
+        state, wait_time = int(data[0]), int(data[1])
+        if state == 0:
+            self.accept_board2_result(0, 0)
+        elif state == 1:
+            if wait_time < 5:
+                rospy.logwarn("识别板2等待时间过小: %d，已修正为5秒", wait_time)
+                wait_time = 5
+            elif wait_time > 10:
+                rospy.logwarn("识别板2等待时间过大: %d，已修正为10秒", wait_time)
+                wait_time = 10
+            self.accept_board2_result(1, wait_time)
 
     def export_recognition_records(self):
         if not hasattr(self, 'recognition_records'):
@@ -894,12 +1178,16 @@ class MoveBaseSquare(object):
     def shutdown(self):
         rospy.loginfo("Stopping the robot...")
         try:
-            if hasattr(self, "move_base"):
+            if (hasattr(self, "move_base")
+                    and self.move_base.get_state() in (GoalStatus.PENDING, GoalStatus.ACTIVE,
+                                                       GoalStatus.PREEMPTING, GoalStatus.RECALLING)):
                 self.move_base.cancel_goal()
                 self.move_base.wait_for_result(rospy.Duration(3.0))
             if hasattr(self, "cmd_vel_pub"):
                 self.cmd_vel_pub.publish(Twist())
         finally:
+            if hasattr(self, 'arrival_guard'):
+                self.arrival_guard.close_configuration_clients()
             self.export_recognition_records()
 
 

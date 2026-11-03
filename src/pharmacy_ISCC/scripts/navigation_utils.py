@@ -70,6 +70,42 @@ class NavigationGuard(object):
         self.listener = tf.TransformListener()
         self.client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
         self.last_requested = None
+        self._configuration_clients = {}
+
+    def configuration_client(self, namespace, timeout):
+        """Reuse a client only after its complete parameter type table is ready."""
+        import threading
+        from dynamic_reconfigure.client import Client
+        if namespace in self._configuration_clients:
+            return self._configuration_clients[namespace]
+        ready = threading.Event()
+        # Melodic exposes param_description before finishing _param_types. This
+        # callback runs after the type table is complete, so wait for it explicitly.
+        client = Client(namespace, timeout=timeout,
+                        description_callback=lambda unused: ready.set())
+        try:
+            deadline = time.time() + float(timeout)
+            while not ready.is_set():
+                remaining = deadline - time.time()
+                if self.ros.is_shutdown() or remaining <= 0:
+                    raise ValueError('Dynamic parameter types were not ready in time')
+                ready.wait(min(0.05, remaining))
+            if client.get_configuration(timeout=timeout) is None:
+                raise ValueError('Dynamic parameter configuration is unavailable')
+            self._configuration_clients[namespace] = client
+            return client
+        except Exception:
+            client.close()
+            raise
+
+    def close_configuration_clients(self):
+        clients = list(self._configuration_clients.values())
+        self._configuration_clients.clear()
+        for client in clients:
+            try:
+                client.close()
+            except Exception as exc:
+                self.ros.logwarn('Dynamic configuration client cleanup failed: %s', exc)
 
     def grid(self):
         from nav_msgs.msg import OccupancyGrid
@@ -92,4 +128,138 @@ class NavigationGuard(object):
             except (self.tf.Exception,ValueError):
                 time.sleep(.1)
         raise ValueError('No fresh map -> base_footprint localization; check navigation/RViz')
+
+    def short_reverse(self, publisher, config, force_reverse=False):
+        """Short back-off; only explicit board-one recovery may bypass rear laser checks."""
+        import threading
+        from geometry_msgs.msg import Twist
+        from sensor_msgs.msg import LaserScan
+        ros = self.ros
+        lock = threading.Lock()
+        latest = [None, 0.0]
+        subscriber = None
+        target = float(config['reverse_distance_m'])
+
+        def receive(msg):
+            with lock:
+                latest[:] = [msg, time.time()]
+
+        def odom_pose():
+            stamp = self.listener.getLatestCommonTime(config['odom_frame'], config['base_frame'])
+            age = (ros.Time.now() - stamp).to_sec()
+            if stamp.to_sec() <= 0 or not (-0.1 <= age <= config['tf_max_age_sec']):
+                raise ValueError('Back-off odometry TF is stale')
+            p, q = self.listener.lookupTransform(config['odom_frame'], config['base_frame'], stamp)
+            if not finite(p):
+                raise ValueError('Invalid odometry position')
+            return p[0], p[1], quaternion_yaw(q)
+
+        def rear_clear(scan, remaining, bounds):
+            age = (ros.Time.now() - scan.header.stamp).to_sec()
+            if scan.header.stamp.to_sec() <= 0 or not (-0.1 <= age <= config['scan_max_age_sec']):
+                raise ValueError('Back-off laser frame is stale')
+            p, q = self.listener.lookupTransform(config['base_frame'], scan.header.frame_id, ros.Time(0))
+            laser_yaw = quaternion_yaw(q)
+            xmin, xmax, ymin, ymax = bounds
+            margin = float(config['rear_margin_m'])
+            rear_total = rear_visible = 0
+            for index, distance in enumerate(scan.ranges):
+                angle = scan.angle_min + index * scan.angle_increment + laser_yaw
+                dx, dy = math.cos(angle), math.sin(angle)
+                valid = (not math.isnan(distance) and not math.isinf(distance)
+                         and scan.range_min <= distance <= scan.range_max)
+                if dx < -math.cos(math.radians(30.0)):
+                    rear_total += 1
+                    exits = [((xmin if dx < 0 else xmax) - p[0]) / dx]
+                    if abs(dy) > 1e-9:
+                        exits.append(((ymin if dy < 0 else ymax) - p[1]) / dy)
+                    exits = [value for value in exits if value >= 0]
+                    if valid and distance > (min(exits) if exits else 0.0) + margin:
+                        rear_visible += 1
+                if not valid:
+                    continue
+                x, y = p[0] + distance * dx, p[1] + distance * dy
+                if xmin - 0.01 <= x <= xmax + 0.01 and ymin - 0.01 <= y <= ymax + 0.01:
+                    continue
+                if xmin - remaining - margin <= x <= xmin + margin and ymin - margin <= y <= ymax + margin:
+                    raise ValueError('Obstacle in the configured rear corridor')
+            if rear_total < 5 or float(rear_visible) / rear_total < config['rear_visible_fraction']:
+                raise ValueError('Rear visibility is insufficient; blind reverse refused')
+
+        success = False
+        motion_started = False
+        start = None
+        try:
+            if not (target > config['distance_tolerance_m'] > 0
+                    and 0 < config['reverse_min_speed_mps'] <= config['reverse_speed_mps']
+                    and config['braking_acceleration'] > 0 and config['control_rate_hz'] > 0):
+                raise ValueError('Invalid back-off distance or speed configuration')
+            hardware_minimum = float(ros.get_param('/base_control/min_cmd_vel_x', 0.03))
+            if hardware_minimum > config['reverse_min_speed_mps']:
+                raise ValueError('Base minimum speed exceeds the back-off braking speed')
+            if force_reverse:
+                ros.logwarn("[BOARD1-RECOVERY] 强制后退：仅本次保底跳过后方激光检查，保留里程计与停车限制")
+            else:
+                footprint = ros.get_param(config['footprint_param'])
+                if not isinstance(footprint, (list, tuple)):
+                    footprint = json.loads(footprint)
+                if len(footprint) < 3 or not all(finite(point) for point in footprint):
+                    raise ValueError('Invalid configured footprint')
+                bounds = (min(v[0] for v in footprint), max(v[0] for v in footprint),
+                          min(v[1] for v in footprint), max(v[1] for v in footprint))
+                subscriber = ros.Subscriber(config['scan_topic'], LaserScan, receive, queue_size=1)
+                ready = time.time() + float(config['scan_ready_timeout_sec'])
+                while not ros.is_shutdown() and latest[0] is None and time.time() < ready:
+                    time.sleep(0.02)
+                if latest[0] is None:
+                    raise ValueError('No raw rear laser data')
+            start = odom_pose()
+            cosine, sine = math.cos(start[2]), math.sin(start[2])
+            deadline = time.time() + float(config['reverse_timeout_sec'])
+            while not ros.is_shutdown() and time.time() < deadline:
+                x, y, yaw = odom_pose()
+                dx, dy = x - start[0], y - start[1]
+                distance = -(dx * cosine + dy * sine)
+                lateral = abs(-dx * sine + dy * cosine)
+                yaw_error = abs(math.atan2(math.sin(yaw - start[2]), math.cos(yaw - start[2])))
+                if distance < -config['maximum_forward_drift_m'] or lateral > config['maximum_lateral_drift_m'] or yaw_error > math.radians(config['maximum_heading_drift_deg']):
+                    raise ValueError('Unexpected direction or heading during back-off')
+                remaining = target - distance
+                if remaining <= config['distance_tolerance_m']:
+                    success = True
+                    break
+                if not force_reverse:
+                    with lock:
+                        scan, received = latest[:]
+                    if scan is None or time.time() - received > config['scan_max_age_sec']:
+                        raise ValueError('Raw rear laser data stopped updating')
+                    rear_clear(scan, remaining, bounds)
+                speed = min(float(config['reverse_speed_mps']),
+                            max(float(config['reverse_min_speed_mps']),
+                                (2.0 * config['braking_acceleration'] * remaining) ** 0.5))
+                command = Twist()
+                command.linear.x = -speed
+                motion_started = True
+                publisher.publish(command)
+                time.sleep(1.0 / float(config['control_rate_hz']))
+            if not success:
+                raise ValueError('Back-off timed out or was interrupted')
+        except Exception as exc:
+            if not motion_started and not ros.is_shutdown():
+                ros.logwarn("[BOARD1-RECOVERY] 后退条件不足，保持停车继续识别: %s", exc)
+                return None
+            raise
+        finally:
+            stop_until = time.time() + float(config['stop_hold_sec'])
+            publisher.publish(Twist())
+            while not ros.is_shutdown() and time.time() < stop_until:
+                publisher.publish(Twist())
+                time.sleep(0.05)
+            if subscriber is not None:
+                subscriber.unregister()
+        x, y, unused = odom_pose()
+        actual = -((x - start[0]) * math.cos(start[2]) + (y - start[1]) * math.sin(start[2]))
+        if actual > target + config['maximum_overshoot_m']:
+            raise ValueError('Back-off overshoot exceeded the configured limit')
+        return actual
 

@@ -1,0 +1,46 @@
+{
+  "precision": "fp32",
+  "input": [
+    1,
+    3,
+    224,
+    224
+  ],
+  "converter": "pnnx 20261020",
+  "runtime": "ncnn 1.0.20261020",
+  "command": "pnnx NAME_best.onnx inputshape=[1,3,224,224] fp16=0",
+  "models": {
+    "status": {
+      "classes": [
+        "busy",
+        "idle"
+      ],
+      "output_size": 2,
+      "input_name": "in0",
+      "output_name": "out0",
+      "sha256": {
+        "status_best.onnx": "42e26efb39c97c04338a80d9635fe39b768d47d5daa4c3e2f1f6169110bb9217",
+        "status_best.ncnn.param": "f1e9bc98de63d530f6b0c5c3f4f97acf39511c57d9b392499348c14f3f77271e",
+        "status_best.ncnn.bin": "b04ad0255a0de8a771f0af915b53aec10bea981f109382594bf77be5a02033c5"
+      }
+    },
+    "number": {
+      "classes": [
+        "10",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "output_size": 6,
+      "input_name": "in0",
+      "output_name": "out0",
+      "sha256": {
+        "number_best.onnx": "9bedc149ec8b1ec90fca9ca761f8f8a3ed5b9b4e5cf602eb3fc4c5ae89a21651",
+        "number_best.ncnn.param": "4cde60b06383b3e9b8bd8c677c2f4276ecd2774a7ed96cc236f0eb027b0f6522",
+        "number_best.ncnn.bin": "0c6a711a80f7cdfca95b8dc829966ae40678af84e9b14921ca966f5a8407a31f"
+      }
+    }
+  }
+}

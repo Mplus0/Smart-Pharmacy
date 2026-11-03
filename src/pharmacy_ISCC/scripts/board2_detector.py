@@ -151,10 +151,12 @@ def detect_board2_status(frame, board2_templates, visit=None, is_active=None):
 
 _yolo_worker = None
 _yolo_stderr = None
+_yolo_ready = None
 
 
 def close_board2_yolo():
-    global _yolo_worker, _yolo_stderr
+    global _yolo_worker, _yolo_stderr, _yolo_ready
+    _yolo_ready = None
     if _yolo_worker is not None:
         if _yolo_worker.poll() is None:
             _yolo_worker.terminate()
@@ -212,27 +214,51 @@ def _write_worker_request(payload, timeout, is_active=None):
         raise RuntimeError('YOLO send timed out or cancelled')
 
 
-def detect_board2_yolo(frame, visit, is_active=None):
-    """Use the node-owned frame; worker owns no camera, ROS topics or TCP port."""
-    global _yolo_worker, _yolo_stderr
+def prepare_board2_yolo(is_active=None):
+    """Create and warm one persistent worker without consuming a camera frame."""
+    global _yolo_worker, _yolo_stderr, _yolo_ready
+    if _yolo_worker is not None and _yolo_worker.poll() is None:
+        return _yolo_ready
     try:
         timeout = float(BOARD2_CFG.get('yolo_timeout_sec', 10.0))
-        if _yolo_worker is None or _yolo_worker.poll() is not None:
-            close_board2_yolo()
-            evidence = os.path.join(records_path(), 'board2_yolo')
-            if not os.path.isdir(evidence):
-                os.makedirs(evidence)
-            _yolo_stderr = open(os.path.join(evidence, 'worker_stderr.log'), 'ab')
-            environment = os.environ.copy()
-            environment.update(OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='2', PYTHONDONTWRITEBYTECODE='1')
-            _yolo_worker = subprocess.Popen([
-                os.path.expanduser(BOARD2_CFG['yolo_python']),
-                os.path.join(os.path.dirname(__file__), 'board2_yolo_worker.py'),
-                '--model-dir', package_path(BOARD2_CFG['yolo_model_dir']),
-                '--evidence-dir', evidence], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                stderr=_yolo_stderr, env=environment, bufsize=0)
-            if not _read_worker_result(timeout, is_active).get('ready'):
-                raise RuntimeError('YOLO worker did not become ready')
+        close_board2_yolo()
+        evidence = os.path.join(records_path(), 'board2_yolo')
+        if not os.path.isdir(evidence):
+            os.makedirs(evidence)
+        _yolo_stderr = open(os.path.join(evidence, 'worker_stderr.log'), 'ab')
+        environment = os.environ.copy()
+        threads = int(BOARD2_CFG.get('yolo_threads', 2))
+        if threads not in (1, 2):
+            raise ValueError('Board2 yolo_threads must be 1 or 2')
+        backend = BOARD2_CFG.get('yolo_backend', 'onnx')
+        if backend not in ('onnx', 'ncnn'):
+            raise ValueError('Board2 yolo_backend must be onnx or ncnn')
+        environment.update(OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS=str(threads), PYTHONDONTWRITEBYTECODE='1')
+        _yolo_worker = subprocess.Popen([
+            os.path.expanduser(BOARD2_CFG['yolo_python']),
+            os.path.join(os.path.dirname(__file__), 'board2_yolo_worker.py'),
+            '--model-dir', package_path(BOARD2_CFG['yolo_model_dir']),
+            '--backend', backend, '--threads', str(threads),
+            '--evidence-dir', evidence], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=_yolo_stderr, env=environment, bufsize=0)
+        ready = _read_worker_result(timeout, is_active)
+        if (not ready.get('ready') or ready.get('backend') != backend
+                or ready.get('threads') != threads or ready.get('warmup_runs') != 2):
+            raise RuntimeError('YOLO worker did not finish model warmup')
+        _yolo_ready = ready
+        rospy.loginfo('Board2 YOLO ready pid=%s backend=%s load_ms=%.1f warmup_ms=%.1f',
+                      _yolo_worker.pid, backend, ready['load_ms'], ready['warmup_ms'])
+        return ready
+    except Exception:
+        close_board2_yolo()
+        raise
+
+
+def detect_board2_yolo(frame, visit, is_active=None):
+    """Use the node-owned frame; worker owns no camera, ROS topics or TCP port."""
+    try:
+        timeout = float(BOARD2_CFG.get('yolo_timeout_sec', 10.0))
+        prepare_board2_yolo(is_active)
         ok, encoded = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
         if not ok:
             raise ValueError('Camera frame JPEG encoding failed')

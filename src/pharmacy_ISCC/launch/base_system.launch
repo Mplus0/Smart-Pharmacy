@@ -2,16 +2,15 @@
   <!--
     base_system.launch — 基础系统启动文件
 
-    将底盘、导航、摄像头和 web_video_server 的启动整合到一起，
+    将底盘、导航和摄像头的启动整合到一起，HTTP 视频流默认关闭，
     不启动任何智慧药房业务节点。
 
     等效命令:
       roslaunch robot_navigation robot_navigation.launch
       roslaunch astra_camera astra.launch
-      rosrun web_video_server web_video_server
 
     用途:
-      - 赛前启动本文件，确认定位、导航、视频流正常。
+      - 赛前启动本文件，确认定位、导航和 ROS 相机图像正常。
 
     开关参数:
       start_navigation:    启动导航 (robot_navigation 或 robot_race_init)。
@@ -22,11 +21,12 @@
 
   <arg name="start_navigation"   default="true" doc="启动导航"/>
   <arg name="start_camera"       default="true" doc="启动摄像头"/>
-  <arg name="start_video_server" default="true" doc="启动 web_video_server"/>
+  <arg name="start_video_server" default="false" doc="启动 web_video_server（默认关闭）"/>
   <arg name="use_race_init"      default="true" doc="使用 robot_race_init.launch 替代 robot_navigation.launch"/>
 
   <arg name="open_rviz" default="false"/>
   <arg name="output" default="screen"/>
+  <arg name="camera_processing" default="true" doc="加载额外RGB/深度处理；比赛只用原始RGB可关闭"/>
 
   <!-- ── 导航（底盘 + 激光雷达 + 定位 + move_base + EKF）─ -->
   <group if="$(arg start_navigation)">
@@ -44,7 +44,14 @@
 
   <!-- ── 摄像头（Astra RGB-D）────────────────────── -->
   <group if="$(arg start_camera)">
-    <include file="$(find astra_camera)/launch/astra.launch"/>
+    <include file="$(find astra_camera)/launch/astra.launch">
+      <arg name="rgb_processing" value="$(arg camera_processing)"/>
+      <arg name="depth_processing" value="$(arg camera_processing)"/>
+      <arg name="depth_registered_processing" value="$(arg camera_processing)"/>
+      <arg name="depth_registration" value="$(arg camera_processing)"/>
+      <arg name="hw_registered_processing" value="$(arg camera_processing)"/>
+      <arg name="sw_registered_processing" value="false"/>
+    </include>
   </group>
 
   <!-- ── HTTP 视频流（供识别节点通过 cv2 读取）───── -->

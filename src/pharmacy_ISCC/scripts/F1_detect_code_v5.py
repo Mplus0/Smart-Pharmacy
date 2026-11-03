@@ -31,7 +31,7 @@ from pharmacy_iscc.config import COMMON, get_car_config, get_car_id
 from pharmacy_iscc.board1_detector import (
     normalize_all_text, select_board1_from_all_text, build_board1_task_queue,
     BOARD1_STABLE_FRAMES, BOARD1_VALID_TEXT, detect_and_publish_board1)
-from pharmacy_iscc.board2_detector import load_board2_templates, detect_board2_status
+from pharmacy_iscc.board2_detector import load_board2_templates, detect_board2_status, prepare_board2_yolo
 from pharmacy_iscc.board2_tcp import query_board2_tcp
 from pharmacy_iscc.audio import play_board1_error_audio
 from pharmacy_iscc.recognition_records import record_result
@@ -71,7 +71,7 @@ CAMERA_RECONNECT_SLEEP_SEC = DETECT_CFG["camera_reconnect_sleep_sec"]
 # 图像输入源：默认直接订阅 ROS Image，HTTP 视频流只作为兜底。
 IMAGE_SOURCE = DETECT_CFG.get("image_source", "ros_topic")
 CAMERA_TOPIC = DETECT_CFG.get("camera_topic", "/camera/rgb/image_raw")
-CAMERA_FALLBACK_TO_HTTP = DETECT_CFG.get("camera_fallback_to_http", True)
+CAMERA_FALLBACK_TO_HTTP = DETECT_CFG.get("camera_fallback_to_http", False)
 CAMERA_MAX_AGE_SEC = DETECT_CFG.get("camera_max_age_sec", 0.5)
 ROS_IMAGE_BUFF_SIZE = DETECT_CFG.get("ros_image_buff_size", 2 ** 24)
 
@@ -501,6 +501,7 @@ def init_ros_node_and_publishers():
     global pub_board1_all_text
 
     rospy.init_node('detect_abc', anonymous=True)
+    rospy.set_param('~startup_ready', False)
 
     # 识别板一：[是否去C，是否去A，是否去B，样品数，windows_1234，错误样品窗口]
     pub_flag = rospy.Publisher('/cam_return', Int32MultiArray, queue_size=10)
@@ -537,10 +538,25 @@ def main():
         raise ValueError('board2.result_source must be tcp, vision or yolo')
     if BOARD2_RESULT_SOURCE == 'vision':
         board2_templates = load_board2_templates()
+    if BOARD2_RESULT_SOURCE == 'yolo':
+        rospy.set_param('~board2_yolo_ready', False)
+        started = time.time()
+        rospy.loginfo('Preparing Board2 YOLO worker at vision startup; no recognition result is published')
+        try:
+            prepare_board2_yolo()
+        except Exception as exc:
+            rospy.logerr('Board2 YOLO startup failed: %s', exc)
+            rospy.signal_shutdown('Board2 YOLO startup failed')
+            return
+        rospy.set_param('~board2_yolo_ready', True)
+        rospy.loginfo('Board2 YOLO startup warmup complete in %.3fs; waiting for recognition state',
+                      time.time() - started)
 
     cap = None
     if IMAGE_SOURCE not in ["ros_topic", "ros_image", "ros_compressed"] or CAMERA_FALLBACK_TO_HTTP:
         cap = open_http_capture()
+    # 主程序快速入口等待本节点完成初始化及模型预热，不依赖固定3/6秒延时。
+    rospy.set_param('~startup_ready', True)
  ##########################################################################################
  #   rospy.sleep(IDLE_GRAB_SLEEP_SEC)   其中0.1可能偏高，表示在非识别状态也以10HZ去grab视频流，可能过高，但是也有好处，可以一直丢弃掉帧，保持视频流最新，
  #   避免在长时间非识别状态后突然进入识别状态时，处理到过旧的帧导致识别失败。可以根据实际情况调整这个值，

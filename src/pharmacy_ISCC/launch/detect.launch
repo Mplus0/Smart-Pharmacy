@@ -4,7 +4,7 @@
   <arg name="state" default="10" doc="10: board1; 13: board2 (configured TCP or vision source)"/>
   <arg name="board2_result_source" default="" doc="empty: config; tcp, vision or yolo"/>
   <arg name="speak_board2" default="false"/>
-  <arg name="camera_fallback_to_http" default="true"/>
+  <arg name="camera_fallback_to_http" default="false"/>
   <arg name="record_dir" default="$(env HOME)/.ros/pharmacy_ISCC/vision_debug"/>
   <node unless="$(arg speak_board2)" pkg="rostopic" type="rostopic" name="vision_debug_state"
         args="pub -l /pharmacy_vision_debug/nav_state std_msgs/Int32 'data: $(arg state)'"/>

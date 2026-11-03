@@ -29,7 +29,7 @@ TebLocalPlannerROS:
  max_vel_x: 1.4 #最大x向速度,
  max_vel_y: 0.0  #最大y向速度，非全向为0
  max_vel_x_backwards: 0.7 #最大x后退速度
- max_vel_theta: 3.2 # the angular velocity is also bounded by min_turning_radius in case of a carlike robot (r = v / omega)
+ max_vel_theta: 2.3 # the angular velocity is also bounded by min_turning_radius in case of a carlike robot (r = v / omega)
  acc_lim_x: 0.3  #最大x加速度，原来为0.1zyc
  acc_lim_y: 0  #最大y向加速度，非全向移动小车需要设置为0
  acc_lim_theta: 0.8  #最大角加速度
@@ -53,7 +53,7 @@ TebLocalPlannerROS:
 
  # GoalTolerance 目标容忍度
 
- xy_goal_tolerance: 0.1  #目标xy偏移容忍度
+ xy_goal_tolerance: 0.10  #目标xy偏移容忍度
  yaw_goal_tolerance: 0.25 #目标角度容忍偏移度,尝试修复Clearing costmap to unstuck robot 问题
  #解决方法来自https://gi2hub.com/pal-robotics/tiago_navigation/issues/7，原来为0.3
  free_goal_vel: False   #允许机器人以最大速度到达目的地，这里要停稳，所以为false

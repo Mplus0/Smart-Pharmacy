@@ -30,7 +30,7 @@
   "minimum_confidence": 0.9,
   "number_normalization": "text_row_gray_v1",
   "minimum_margin": 0.15,
-  "smoothing_frames": 5,
+  "smoothing_frames": 1,
   "black_threshold": 110,
   "input": [
     1,

@@ -1,6 +1,7 @@
 <launch>
   <!-- Arguments -->
   <arg name="map_file" default="$(find robot_navigation)/maps/map.yaml"/>
+  <arg name="planning_map_file" default="$(find robot_navigation)/maps/map_planning.yaml"/>
   <arg name="simulation" default="false"/>
   <arg name="planner" default="teb" doc="opt: dwa, teb"/>
   <arg name="open_rviz" default="false"/>
@@ -67,6 +68,14 @@
       <param name="frame_id" value="map"/>
     </node>
 
+    <!-- Planning-only virtual walls; localization keeps the original /map. -->
+    <group ns="planning">
+      <node pkg="map_server" name="map_server" type="map_server" args="$(arg planning_map_file)">
+        <param name="frame_id" value="map"/>
+      </node>
+    </group>
+
+
 
     <!--
       EKF 输入：
@@ -108,6 +117,7 @@
       <param name="initial_pose_y" value="0.0"/>
       <param name="initial_pose_a" value="0.0"/>
 
+      <remap from="map" to="/map"/>
       <remap from="scan" to="scan_filtered"/>
     </node>
 
@@ -118,6 +128,7 @@
   <!-- move_base -->
   <!-- ========================================================= -->
   <include file="$(find robot_navigation)/launch/move_base.launch">
+    <arg name="static_map_topic" value="$(eval '/map' if simulation else '/planning/map')"/>
     <arg name="planner" value="$(arg planner)"/>
     <arg name="simulation" value="$(arg simulation)"/>
 

@@ -6,7 +6,7 @@ global_costmap:
   robot_base_frame: base_footprint
 
   # 全局地图更新频率
-  # 场地固定，不需要 5Hz
+  # 2Hz合并静态地图与激光临时障碍，供1Hz全局重规划使用。
   update_frequency: 2.0
 
   # 发布频率主要用于 RViz 显示
@@ -21,9 +21,12 @@ global_costmap:
   # 低算力平台给 TF 一定容忍时间
   transform_tolerance: 0.5
 
-  # 使用插件模式，不再额外写 static_map: true。原因是的比赛场地固定，动态障碍主要交给局部代价地图处理，这样更省算力，也能减少雷达噪声导致全局路径频繁变化。
+  # 顺序必须为静态层 -> 实时障碍层 -> 膨胀层。
+  # 障碍层沿用costmap_common_params.yaml的激光标记/清除及3.0m/3.5m范围；
+  # move_base.launch把scan重映射到scan_filtered。静态定位地图不被修改。
   plugins:
     - {name: static_layer,    type: "costmap_2d::StaticLayer"}
+    - {name: obstacle_layer,  type: "costmap_2d::ObstacleLayer"}
     - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
 
   static_layer:
@@ -33,9 +36,8 @@ global_costmap:
   inflation_layer:
     enabled: true
 
-    # 全局路径希望更居中、更平滑
-    # 0.20m 在 0.02m 分辨率下约 10 个栅格
-    # 对 500mm 窄通道仍然可用
+    # 原有0.30m膨胀影响范围同时作用于墙体和新检测的临时障碍。
+    # 膨胀代价随距离衰减，0.30m不是全部设置为不可通行。
     inflation_radius: 0.3
 
     # 比 10 略柔和，让全局路径更愿意走通道中间

@@ -1,11 +1,24 @@
 <launch>
   <!-- Reuse navigation and camera. Refresh board one after two deliveries; run until stopped. -->
   <arg name="max_rounds" default="0"/>
+  <arg name="start_base" default="false"/>
+  <arg name="fast_start" default="false"/>
+  <arg name="output" default="screen"/>
+  <include if="$(arg start_base)" file="$(find pharmacy_ISCC)/launch/base_system.launch">
+    <arg name="use_race_init" value="true"/>
+    <arg name="open_rviz" value="false"/>
+    <arg name="start_video_server" value="false"/>
+    <arg name="camera_processing" value="$(eval not fast_start)"/>
+  </include>
   <include file="$(find pharmacy_ISCC)/launch/pharmacy_main.launch">
     <arg name="car_id" value="1"/>
     <arg name="start_dual_tcp" value="false"/>
     <arg name="enable_dual_car" value="false"/>
     <arg name="max_rounds" value="$(arg max_rounds)"/>
     <arg name="respawn_detect" value="false"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="detect_start_delay" value="$(eval 0 if fast_start else 3)"/>
+    <arg name="nav_start_delay" value="$(eval 0 if fast_start else 6)"/>
+    <arg name="wait_for_startup_ready" value="$(arg fast_start)"/>
   </include>
 </launch>
